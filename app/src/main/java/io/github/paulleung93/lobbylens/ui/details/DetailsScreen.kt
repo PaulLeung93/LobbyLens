@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.github.paulleung93.lobbylens.ui.components.BarChart
+import java.text.NumberFormat
 
 @Composable
 fun DetailsScreen(navController: NavController, cid: String?, viewModel: DetailsViewModel = viewModel()) {
@@ -39,13 +40,14 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
             // Create data for the chart by summing totals for each cycle
             val chartData = remember(historicalOrganizations) {
                 historicalOrganizations.mapValues { (_, organizations) ->
-                    organizations.sumOf { it.attributes.total.toDoubleOrNull() ?: 0.0 }.toFloat()
+                    // CORRECTED: Use the new FecEmployerContribution model
+                    organizations.sumOf { it.total }.toFloat()
                 }.filter { it.value > 0f } // Filter out cycles with no data
             }
 
             if (chartData.isNotEmpty()) {
                 Text(
-                    text = "Total Contributions by Cycle",
+                    text = "Total Contributions by Employer by Cycle",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -57,15 +59,19 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                 historicalOrganizations.forEach { (cycle, organizations) ->
                     item {
                         Text(
-                            text = "Top Contributors for $cycle",
+                            text = "Top Contributors by Employer for $cycle",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
                     items(organizations) { organization ->
-                        // Display organization name and total contribution
-                        Text(text = "${organization.attributes.orgName}: ${organization.attributes.total}")
+                        // CORRECTED: Use the new FecEmployerContribution model
+                        // Formatting the currency for better readability
+                        val formattedTotal = remember(organization.total) {
+                            NumberFormat.getCurrencyInstance().format(organization.total)
+                        }
+                        Text(text = "${organization.employer}: $formattedTotal")
                     }
                 }
             }

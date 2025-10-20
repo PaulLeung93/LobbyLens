@@ -1,25 +1,46 @@
 package io.github.paulleung93.lobbylens.data.network
 
+import io.github.paulleung93.lobbylens.BuildConfig
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 /**
- * Singleton object for providing a configured Retrofit instance.
+ * Singleton object for providing a configured Retrofit instance for the FEC API.
  * This ensures that a single, efficient networking client is used throughout the app.
  */
 object RetrofitInstance {
 
-    private const val BASE_URL = "https://www.opensecrets.org/api/"
+    // The base URL for the official FEC API.
+    private const val BASE_URL = "https://api.open.fec.gov/v1/"
 
     /**
-     * Lazily creates and configures a Retrofit instance.
+     * Creates an OkHttpClient that adds the FEC API key as a query parameter to every request.
+     * This is the standard way to handle API key authentication with Retrofit.
+     */
+    private val httpClient = OkHttpClient.Builder().addInterceptor { chain ->
+        val original = chain.request()
+        val originalHttpUrl = original.url
+
+        val url = originalHttpUrl.newBuilder()
+            .addQueryParameter("api_key", BuildConfig.FEC_API_KEY)
+            .build()
+
+        val requestBuilder = original.newBuilder().url(url)
+        val request = requestBuilder.build()
+        chain.proceed(request)
+    }.build()
+
+    /**
+     * Lazily creates and configures a Retrofit instance for the new FEC API service.
      * The lazy delegate ensures that the instance is created only once, when it's first needed.
      */
-    val api: OpenSecretsApiService by lazy {
+    val api: FecApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
+            .client(httpClient) // Use the client with the authentication interceptor
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(OpenSecretsApiService::class.java)
+            .create(FecApiService::class.java)
     }
 }

@@ -37,12 +37,11 @@ import java.nio.charset.StandardCharsets
 fun EditorScreen(
     navController: NavController,
     imageUri: String?,
-    cid: String?,
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var text by remember { mutableStateOf("") }
-    val legislators by remember { viewModel.legislators }
+    val candidates by remember { viewModel.candidates }
     val isLoading by remember { viewModel.isLoading }
     val topOrganizations by remember { viewModel.topOrganizations }
     val organizationLogos by remember { viewModel.organizationLogos }
@@ -60,7 +59,6 @@ fun EditorScreen(
 
     if (imageUri != null) {
         // Effect 1: One-time recognition pipeline.
-        // Runs only when the imageUri changes.
         LaunchedEffect(imageUri) {
             try {
                 processingState = "Loading image..."
@@ -99,7 +97,6 @@ fun EditorScreen(
 
                 val (politicianCid, _) = recognitionResult
                 recognizedCid = politicianCid
-                // Trigger initial data fetch for the default cycle
                 viewModel.fetchTopOrganizations(politicianCid, selectedCycle)
 
             } catch (e: Exception) {
@@ -109,7 +106,6 @@ fun EditorScreen(
         }
 
         // Effect 2: Image composition pipeline.
-        // Re-runs whenever the organization logos change (i.e., new cycle is selected).
         LaunchedEffect(organizationLogos) {
             if (organizationLogos.isNotEmpty() && topOrganizations.isNotEmpty() && originalBitmap != null && selfieMask != null && detectedFace != null) {
                 processingState = "Composing final image..."
@@ -122,8 +118,7 @@ fun EditorScreen(
                 )
                 processingState = "Done!"
             } else if (recognizedCid != null) {
-                // Handle the case where logos are cleared for a new cycle
-                composedBitmap = null // Revert to original image
+                composedBitmap = null
                 if (isLoading) {
                     processingState = "Fetching data for $selectedCycle..."
                 }
@@ -186,13 +181,14 @@ fun EditorScreen(
         // Manual search mode (existing implementation)
         Column(modifier = Modifier.padding(16.dp)) {
             TextField(value = text, onValueChange = { text = it }, label = { Text("Enter Politician Name") })
-            Button(onClick = { viewModel.searchLegislators(text) }) { Text("Search") }
+            Button(onClick = { viewModel.searchCandidatesByName(text) }) { Text("Search") }
             if (isLoading) { CircularProgressIndicator() }
             LazyColumn {
-                items(legislators) { legislator ->
+                items(candidates) { candidate ->
                     Text(
-                        text = legislator.attributes.firstLast,
-                        modifier = Modifier.clickable { navController.navigate("details/${legislator.attributes.cid}") }.fillMaxWidth().padding(8.dp)
+                        text = candidate.name,
+                        // CORRECTED: Use the correct 'candidateId' property
+                        modifier = Modifier.clickable { navController.navigate("details/${candidate.candidateId}") }.fillMaxWidth().padding(8.dp)
                     )
                 }
             }

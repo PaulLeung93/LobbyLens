@@ -11,7 +11,7 @@ import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import com.google.mlkit.vision.segmentation.SegmentationMask
-import io.github.paulleung93.lobbylens.data.model.Organization
+import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -28,7 +28,7 @@ object ImageUtils {
      *
      * @param baseBitmap The original image of the politician.
      * @param mask The selfie segmentation mask to identify the person.
-     * @param organizations A list of top contributing organizations.
+     * @param organizations A list of top contributing organizations (by employer) from the FEC API.
      * @param logos A map of organization names to their downloaded logo bitmaps.
      * @param faceBounds The bounding box of the detected face, to avoid drawing over it.
      * @return A new bitmap with the data overlays.
@@ -36,30 +36,31 @@ object ImageUtils {
     fun composeImage(
         baseBitmap: Bitmap,
         mask: SegmentationMask,
-        organizations: List<Organization>,
+        organizations: List<FecEmployerContribution>, // CORRECTED: Use the new FEC data model
         logos: Map<String, Bitmap>,
         faceBounds: Rect
     ): Bitmap {
         val mutableBitmap = baseBitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(mutableBitmap)
 
-        val maxDonation = organizations.maxOfOrNull { it.attributes.total.toDoubleOrNull() ?: 0.0 } ?: 1.0
-        val minIconSize = (mutableBitmap.width * 0.1).toInt() // Example: 10% of image width
-        val maxIconSize = (mutableBitmap.width * 0.25).toInt() // Example: 25% of image width
+        // CORRECTED: Use the 'total' property from the new data model
+        val maxDonation = organizations.maxOfOrNull { it.total } ?: 1.0
+        val minIconSize = (mutableBitmap.width * 0.1).toInt()
+        val maxIconSize = (mutableBitmap.width * 0.25).toInt()
 
         val occupiedAreas = mutableListOf(faceBounds)
 
         organizations.forEach { organization ->
-            // Get the pre-downloaded logo from the map
-            val iconBitmap = logos[organization.attributes.orgName] ?: return@forEach
+            // CORRECTED: Use the 'employer' property to get the logo
+            val iconBitmap = logos[organization.employer] ?: return@forEach
 
-            val donation = organization.attributes.total.toDoubleOrNull() ?: 0.0
+            // CORRECTED: Use the 'total' property for donation amount
+            val donation = organization.total
             val scale = (donation / maxDonation)
             val size = (minIconSize + (maxIconSize - minIconSize) * sqrt(scale)).toInt().coerceAtLeast(1)
 
             val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, size, size, true)
 
-            // Find a position for the icon
             val position = findNextAvailablePosition(mask, size, occupiedAreas)
             position?.let {
                 canvas.drawBitmap(scaledIcon, it.x.toFloat(), it.y.toFloat(), null)
@@ -72,7 +73,6 @@ object ImageUtils {
 
     /**
      * Finds an available position to place an icon, avoiding occupied areas.
-     * (This is a simplified placement algorithm).
      */
     private fun findNextAvailablePosition(
         mask: SegmentationMask,
@@ -83,14 +83,12 @@ object ImageUtils {
         val maskWidth = mask.width
         val maskHeight = mask.height
 
-        // Search in a grid pattern, starting from the center and moving outwards
-        val step = iconSize / 4 // A smaller step for better placement
+        val step = iconSize / 4
         for (y in (maskHeight / 2) until (maskHeight - iconSize) step step) {
             for (x in (maskWidth / 4) until (maskWidth - (maskWidth / 4) - iconSize) step step) {
 
-                // Check if the center of the proposed rect is on the person
                 val maskConfidence = maskBuffer.getFloat((y + iconSize / 2) * maskWidth + (x + iconSize / 2))
-                if (maskConfidence < 0.9) continue // Higher threshold for being confidently on the person
+                if (maskConfidence < 0.9) continue
 
                 val newRect = Rect(x, y, x + iconSize, y + iconSize)
                 if (occupiedRects.none { it.intersect(newRect) }) {
@@ -98,7 +96,7 @@ object ImageUtils {
                 }
             }
         }
-        return null // No position found
+        return null
     }
 
     fun saveImageToGallery(context: Context, bitmap: Bitmap, displayName: String): Uri? {

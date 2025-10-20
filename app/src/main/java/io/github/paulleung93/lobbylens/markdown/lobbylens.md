@@ -36,15 +36,15 @@ Technical Stack
 ○	TensorFlow Lite: For running the FaceNet model for true facial recognition.
 ●	Networking: Retrofit2 for handling API calls.
 ●	Image Loading: Coil for fetching, caching, and displaying company logos.
-●	API: OpenSecrets.org for all campaign finance data.
+●	API: FEC (Federal Election Commission) API for all legislator and campaign finance data.
 ●	Logo API: A third-party logo-finding service is used to automatically find company logos.
 
 Final Project Architecture (MVVM)
 This structure separates concerns, making the app scalable, testable, and maintainable.
 ●	MainActivity.kt: The single activity entry point; its only job is to host the Jetpack Compose navigation.
 ●	data/: The data layer, responsible for all data sources.
-○	model/Models.kt: Contains all Kotlin data classes (e.g., Organization, Legislator) used for parsing API responses.
-○	network/OpenSecretsApiService.kt: The Retrofit interface defining the API endpoints.
+○	model/Models.kt: Contains all Kotlin data classes (e.g., FecCandidate) used for parsing API responses.
+○	network/FecApiService.kt: The Retrofit interface defining the API endpoints.
 ○	network/RetrofitInstance.kt: The singleton object that provides a configured Retrofit instance.
 ○	repository/PoliticianRepository.kt: The single source of truth for data; it abstracts away the network calls from the ViewModels.
 ●	domain/: The domain layer for core business logic.
@@ -60,23 +60,23 @@ This structure separates concerns, making the app scalable, testable, and mainta
 ●	util/: A package for utility and helper functions.
 ○	ImageUtils.kt: Contains helper functions for bitmap manipulation, saving, and sharing.
 ○	MlKitUtils.kt: Helper functions for ML Kit operations like face detection and segmentation.
-○	LogoUtils.kt: A helper utility for fetching company logos.
-○	Result.kt: A generic wrapper for handling operations that can succeed or fail.
+	LogoUtils.kt: A helper utility for fetching company logos.
+	Result.kt: A generic wrapper for handling operations that can succeed or fail.
 
 ### Project Setup & Prerequisites
 
 Before the application can be fully functional, a few manual setup steps are required. The codebase is complete, but it relies on external assets and keys that you must provide.
 
-**1. Obtain an OpenSecrets API Key:**
-*   **Action:** Register for a free API key at [OpenSecrets.org](https://www.opensecrets.org/api/admin/user_register.php).
-*   **Integration:** Open the file `app/src/main/java/io/github/paulleung93/lobbylens/data/network/OpenSecretsApiService.kt` and replace the placeholder `"YOUR_API_KEY_HERE"` with your actual key.
+**1. Obtain a U.S. Government FEC API Key:**
+*   **Action:** Register for a free, public API key at the official government portal: [https://api.data.gov/signup/](https://api.data.gov/signup/).
+*   **Integration:** Open the `local.properties` file in the root of your project and add your API key like this: `FEC_API_KEY="YOUR_API_KEY_HERE"`.
 
 **2. Download the TensorFlow Lite Model:**
 *   **Action:** Download a pre-trained `FaceNet.tflite` model. You can find compatible versions by searching online for "FaceNet tflite model download". You do **not** need to train your own model.
 *   **Integration:** Place the downloaded `FaceNet.tflite` file directly into the `app/src/main/assets/` directory in your project. Create this folder if it doesn't exist.
 
 **3. Generate the Embeddings Database:**
-*   **Action:** This is the most crucial step for facial recognition. You need to create the `embeddings.json` file using the provided offline Python script (`generate_embeddings.py`). This script processes a folder of politician images (ideally named by their OpenSecrets CID, e.g., `N00007360.jpg`) and uses the FaceNet model to create a unique facial "fingerprint" for each one.
+*   **Action:** This is the most crucial step for facial recognition. You need to create the `embeddings.json` file using the provided offline Python script (`generate_embeddings.py`). This script processes a folder of politician images (ideally named by their FEC candidate ID, e.g., `H8CA05035.jpg`) and uses the FaceNet model to create a unique facial "fingerprint" for each one.
 *   **Integration:** Once generated, place the `embeddings.json` file into the same `app/src/main/assets/` directory.
 
 Development Plan
@@ -85,7 +85,7 @@ Phase 1: Core Functionality & Data Pipeline
 ●	Objective: Establish the core MVVM architecture, data layer, and navigation.
 ●	Steps:
 1.	Set up the base project with a professional MVVM structure from the start.
-2.	Implement the Retrofit data layer to fetch politician and industry data from the OpenSecrets API.
+2.	Implement the Retrofit data layer to fetch politician and industry data from the official FEC API.
 3.	Create ViewModels to manage UI state and interact with the data repository.
 4. Set up the basic navigation graph for the Home, Editor, and Details screens.
 

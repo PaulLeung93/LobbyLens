@@ -1,61 +1,61 @@
 package io.github.paulleung93.lobbylens.data.repository
 
-import io.github.paulleung93.lobbylens.data.model.LegislatorResponse
-import io.github.paulleung93.lobbylens.data.model.OrganizationResponse
-import io.github.paulleung93.lobbylens.data.network.RetrofitInstance
+import io.github.paulleung93.lobbylens.data.api.FecApiService
+import io.github.paulleung93.lobbylens.data.api.RetrofitInstance
+import io.github.paulleung93.lobbylens.data.model.FecCandidateResponse
+import io.github.paulleung93.lobbylens.data.model.FecEmployerContributionResponse
 import io.github.paulleung93.lobbylens.util.Result
 
 /**
- * Repository for fetching politician data from the OpenSecrets API.
+ * Repository for fetching politician data from the official FEC (Federal Election Commission) API.
  * This class abstracts the data source and provides a clean API for the ViewModels to use,
  * wrapping all network calls in a Result class to handle success and error states gracefully.
  * It also includes an in-memory caching layer to improve performance and reduce API usage.
  */
 class PoliticianRepository {
 
-    private val apiService = RetrofitInstance.api
+    private val apiService: FecApiService by lazy { RetrofitInstance.api }
 
-    // In-memory cache for API responses
-    private val legislatorCache = mutableMapOf<String, Result<LegislatorResponse>>()
-    private val organizationCache = mutableMapOf<Pair<String, String>, Result<OrganizationResponse>>()
+    // In-memory cache for API responses.
+    private val candidatesCache = mutableMapOf<String, Result<FecCandidateResponse>>()
+    private val organizationsCache = mutableMapOf<String, Result<FecEmployerContributionResponse>>()
 
     /**
-     * Fetches a list of legislators based on a name query, using a cache.
-     * @param name The name of the politician to search for.
-     * @return A Result containing either the LegislatorResponse or an Exception.
+     * Searches for candidates by name using the FEC API.
      */
-    suspend fun getLegislators(name: String): Result<LegislatorResponse> {
-        // Check cache first
-        legislatorCache[name]?.let { return it }
+    suspend fun searchCandidatesByName(name: String): Result<FecCandidateResponse> {
+        candidatesCache[name]?.let { return it }
 
-        // If not in cache, make network call
         return try {
-            val response = apiService.getLegislators(id = name)
-            val result = Result.Success(response)
-            legislatorCache[name] = result // Store in cache
-            result
+            val response = apiService.searchCandidates(query = name)
+            if (response.isSuccessful && response.body() != null) {
+                val result = Result.Success(response.body()!!)
+                candidatesCache[name] = result
+                result
+            } else {
+                Result.Error(Exception("API Error: ${response.message()}"))
+            }
         } catch (e: Exception) {
             Result.Error(e)
         }
     }
 
     /**
-     * Fetches the top contributing organizations for a specific legislator, using a cache.
-     * @param cid The legislator's unique campaign ID.
-     * @param cycle The election cycle to query.
-     * @return A Result containing either the OrganizationResponse or an Exception.
+     * Fetches top contributing organizations (by employer) for a given candidate and cycle.
      */
-    suspend fun getTopOrganizations(cid: String, cycle: String): Result<OrganizationResponse> {
-        val cacheKey = cid to cycle
-        // Check cache first
-        organizationCache[cacheKey]?.let { return it }
+    suspend fun getTopOrganizations(cid: String, cycle: String): Result<FecEmployerContributionResponse> {
+        val cacheKey = "$cid-$cycle"
+        organizationsCache[cacheKey]?.let { return it }
 
-        // If not in cache, make network call
         return try {
-            val response = apiService.getTopOrganizations(cid = cid, cycle = cycle)
-            val result = Result.Success(response)
-            organizationCache[cacheKey] = result // Store in cache
-            result
+            val response = apiService.getTopOrganizationsByEmployer(candidateId = cid, cycle = cycle)
+            if (response.isSuccessful && response.body() != null) {
+                val result = Result.Success(response.body()!!)
+                organizationsCache[cacheKey] = result
+                result
+            } else {
+                Result.Error(Exception("API Error: ${response.message()}"))
+            }
         } catch (e: Exception) {
             Result.Error(e)
         }

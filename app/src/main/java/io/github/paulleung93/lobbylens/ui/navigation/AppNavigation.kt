@@ -23,13 +23,10 @@ fun AppNavigation(modifier: Modifier = Modifier) {
             HomeScreen(navController = navController)
         }
         composable(
-            route = "editor?imageUri={imageUri}&cid={cid}",
+            // CORRECTED: Removed the obsolete 'cid' parameter from the route
+            route = "editor?imageUri={imageUri}",
             arguments = listOf(
                 navArgument("imageUri") {
-                    type = NavType.StringType
-                    nullable = true
-                },
-                navArgument("cid") {
                     type = NavType.StringType
                     nullable = true
                 }
@@ -37,8 +34,7 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         ) { backStackEntry ->
             EditorScreen(
                 navController = navController,
-                imageUri = backStackEntry.arguments?.getString("imageUri"),
-                cid = backStackEntry.arguments?.getString("cid")
+                imageUri = backStackEntry.arguments?.getString("imageUri")
             )
         }
         composable(
