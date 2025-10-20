@@ -18,15 +18,16 @@ class PoliticianRepository {
      * @return A LegislatorResponse containing the list of matching legislators.
      */
     suspend fun getLegislators(name: String): LegislatorResponse {
-        return apiService.getLegislators(name = name)
+        return apiService.getLegislators(id = name)
     }
 
     /**
      * Fetches the top contributing industries for a specific legislator.
      * @param cid The legislator's unique campaign ID.
+     * @param cycle The election cycle to query.
      * @return An IndustryResponse containing the list of top industries.
      */
-    suspend fun getTopIndustries(cid: String): IndustryResponse {
-        return apiService.getTopIndustries(cid = cid)
+    suspend fun getTopIndustries(cid: String, cycle: String): IndustryResponse {
+        return apiService.getTopIndustries(cid = cid, cycle = cycle)
     }
 }

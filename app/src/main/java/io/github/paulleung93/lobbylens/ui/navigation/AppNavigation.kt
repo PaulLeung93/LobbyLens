@@ -22,8 +22,17 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         composable("home") {
             HomeScreen(navController = navController)
         }
-        composable("editor") {
-            EditorScreen(navController = navController)
+        composable(
+            route = "editor?imageUri={imageUri}",
+            arguments = listOf(navArgument("imageUri") {
+                type = NavType.StringType
+                nullable = true
+            })
+        ) { backStackEntry ->
+            EditorScreen(
+                navController = navController,
+                imageUri = backStackEntry.arguments?.getString("imageUri")
+            )
         }
         composable(
             route = "details/{cid}",
