@@ -2,7 +2,6 @@ package io.github.paulleung93.lobbylens.ui.editor
 
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
-import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -23,13 +23,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.google.mlkit.vision.face.Face
+import com.google.mlkit.vision.segmentation.SegmentationMask
 import io.github.paulleung93.lobbylens.domain.ai.FaceRecognizer
 import io.github.paulleung93.lobbylens.util.ImageUtils
 import io.github.paulleung93.lobbylens.util.MlKitUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
@@ -37,45 +37,58 @@ import java.nio.charset.StandardCharsets
 fun EditorScreen(
     navController: NavController,
     imageUri: String?,
+    cid: String?,
     viewModel: EditorViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var text by remember { mutableStateOf("") }
     val legislators by remember { viewModel.legislators }
     val isLoading by remember { viewModel.isLoading }
+    val topOrganizations by remember { viewModel.topOrganizations }
+    val organizationLogos by remember { viewModel.organizationLogos }
+    val selectedCycle by remember { viewModel.selectedCycle }
 
-    var displayBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    // State for the image processing pipeline
+    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var composedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var selfieMask by remember { mutableStateOf<SegmentationMask?>(null) }
+    var detectedFace by remember { mutableStateOf<Face?>(null) }
     var processingState by remember { mutableStateOf("Idle") }
     var recognizedCid by remember { mutableStateOf<String?>(null) }
 
+    val displayBitmap = composedBitmap ?: originalBitmap
+
     if (imageUri != null) {
-        // The main processing pipeline, running in a LaunchedEffect.
-        LaunchedEffect(imageUri, viewModel) {
+        // Effect 1: One-time recognition pipeline.
+        // Runs only when the imageUri changes.
+        LaunchedEffect(imageUri) {
             try {
                 processingState = "Loading image..."
                 val decodedUri = URLDecoder.decode(imageUri, StandardCharsets.UTF_8.toString())
-                val originalBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(decodedUri)))
                 } else {
                     MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(decodedUri))
                 }.copy(Bitmap.Config.ARGB_8888, true)
-                displayBitmap = originalBitmap
+                originalBitmap = bitmap
 
                 processingState = "Analyzing image..."
                 val (faces, mask) = coroutineScope {
-                    val faceDetectionJob = async { MlKitUtils.detectFaces(originalBitmap) }
-                    val segmentationJob = async { MlKitUtils.segmentSelfie(originalBitmap) }
+                    val faceDetectionJob = async { MlKitUtils.detectFaces(bitmap) }
+                    val segmentationJob = async { MlKitUtils.segmentSelfie(bitmap) }
                     faceDetectionJob.await() to segmentationJob.await()
                 }
+                selfieMask = mask
 
                 if (faces.isEmpty() || mask == null) {
                     processingState = "Could not detect a person or face. Please try another photo."
                     return@LaunchedEffect
                 }
+                val face = faces.first()
+                detectedFace = face
 
                 processingState = "Recognizing politician..."
-                val face = faces.first()
-                val croppedFace = Bitmap.createBitmap(originalBitmap, face.boundingBox.left, face.boundingBox.top, face.boundingBox.width(), face.boundingBox.height())
+                val croppedFace = Bitmap.createBitmap(bitmap, face.boundingBox.left, face.boundingBox.top, face.boundingBox.width(), face.boundingBox.height())
                 val faceRecognizer = FaceRecognizer(context)
                 val recognitionResult = faceRecognizer.recognize(croppedFace)
 
@@ -84,22 +97,36 @@ fun EditorScreen(
                     return@LaunchedEffect
                 }
 
-                val (cid, _) = recognitionResult
-                recognizedCid = cid
-                processingState = "Fetching financial data..."
-                viewModel.fetchTopOrganizations(cid)
-
-                // Wait for the data to be loaded.
-                snapshotFlow { viewModel.topOrganizations.value }
-                    .filter { it.isNotEmpty() }.first()
-
-                // TODO: Re-enable visualization once ImageUtils is updated for organizations.
-                processingState = "Done! Visualization pending update."
-                displayBitmap = originalBitmap // Temporarily display original image.
+                val (politicianCid, _) = recognitionResult
+                recognizedCid = politicianCid
+                // Trigger initial data fetch for the default cycle
+                viewModel.fetchTopOrganizations(politicianCid, selectedCycle)
 
             } catch (e: Exception) {
                 e.printStackTrace()
                 processingState = "An error occurred: ${e.message}"
+            }
+        }
+
+        // Effect 2: Image composition pipeline.
+        // Re-runs whenever the organization logos change (i.e., new cycle is selected).
+        LaunchedEffect(organizationLogos) {
+            if (organizationLogos.isNotEmpty() && topOrganizations.isNotEmpty() && originalBitmap != null && selfieMask != null && detectedFace != null) {
+                processingState = "Composing final image..."
+                composedBitmap = ImageUtils.composeImage(
+                    baseBitmap = originalBitmap!!,
+                    mask = selfieMask!!,
+                    organizations = topOrganizations,
+                    logos = organizationLogos,
+                    faceBounds = detectedFace!!.boundingBox
+                )
+                processingState = "Done!"
+            } else if (recognizedCid != null) {
+                // Handle the case where logos are cleared for a new cycle
+                composedBitmap = null // Revert to original image
+                if (isLoading) {
+                    processingState = "Fetching data for $selectedCycle..."
+                }
             }
         }
 
@@ -110,7 +137,7 @@ fun EditorScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(text = processingState)
-            
+
             if (displayBitmap != null) {
                 Image(
                     bitmap = displayBitmap!!.asImageBitmap(),
@@ -120,8 +147,17 @@ fun EditorScreen(
             } else {
                 CircularProgressIndicator(modifier = Modifier.weight(1f))
             }
-            
-            if (recognizedCid != null && processingState.startsWith("Done!")) {
+
+            if (recognizedCid != null) {
+                CycleSelector(
+                    selectedCycle = selectedCycle,
+                    onCycleSelected = { newCycle ->
+                        viewModel.fetchTopOrganizations(recognizedCid!!, newCycle)
+                    }
+                )
+            }
+
+            if (recognizedCid != null && processingState == "Done!") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -159,6 +195,25 @@ fun EditorScreen(
                         modifier = Modifier.clickable { navController.navigate("details/${legislator.attributes.cid}") }.fillMaxWidth().padding(8.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun CycleSelector(selectedCycle: String, onCycleSelected: (String) -> Unit) {
+    val cycles = listOf("2024", "2022", "2020", "2018")
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        cycles.forEach { cycle ->
+            val isSelected = cycle == selectedCycle
+            Button(
+                onClick = { onCycleSelected(cycle) },
+                colors = if (isSelected) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
+            ) {
+                Text(cycle)
             }
         }
     }

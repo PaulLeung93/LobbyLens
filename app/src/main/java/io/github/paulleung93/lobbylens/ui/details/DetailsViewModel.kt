@@ -5,35 +5,53 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.paulleung93.lobbylens.data.model.Organization
 import io.github.paulleung93.lobbylens.data.repository.PoliticianRepository
+import io.github.paulleung93.lobbylens.util.Result
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel for the Details screen.
- * It is responsible for fetching top organization data for a specific politician.
+ * It is responsible for fetching top organization data for a specific politician across multiple cycles,
+ * using a Result wrapper for robust and graceful error handling.
  */
 class DetailsViewModel : ViewModel() {
 
     private val repository = PoliticianRepository()
 
-    val organizations = mutableStateOf<List<Organization>>(emptyList())
+    val historicalOrganizations = mutableStateOf<Map<String, List<Organization>>>(emptyMap())
     val isLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
 
     /**
-     * Fetches the top contributing organizations for a given politician's campaign ID (cid).
+     * Fetches historical data concurrently and handles partial failures gracefully.
      * @param cid The campaign ID of the politician.
-     * @param cycle The election cycle.
      */
-    fun fetchTopOrganizations(cid: String, cycle: String = "2022") {
+    fun fetchHistoricalData(cid: String) {
         viewModelScope.launch {
             isLoading.value = true
             errorMessage.value = null
-            try {
-                val response = repository.getTopOrganizations(cid = cid, cycle = cycle)
-                organizations.value = response.response.organizations.organizationList
-            } catch (e: Exception) {
-                errorMessage.value = "Failed to fetch data: ${e.message}"
+            historicalOrganizations.value = emptyMap()
+
+            val cycles = listOf("2024", "2022", "2020")
+            val historicalData = cycles.map { cycle ->
+                async {
+                    when (val result = repository.getTopOrganizations(cid, cycle)) {
+                        is Result.Success -> cycle to result.data.response.organizations.organizationList
+                        is Result.Error -> cycle to null // Use null to indicate failure
+                        else -> cycle to null
+                    }
+                }
+            }.awaitAll()
+             .mapNotNull { it.first to (it.second ?: return@mapNotNull null) }
+             .toMap()
+
+            if (historicalData.isEmpty()) {
+                errorMessage.value = "Failed to fetch any historical data. Please check your connection."
+            } else {
+                historicalOrganizations.value = historicalData
             }
+
             isLoading.value = false
         }
     }
