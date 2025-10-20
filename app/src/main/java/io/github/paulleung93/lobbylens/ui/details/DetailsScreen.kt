@@ -16,20 +16,27 @@ import androidx.navigation.NavController
 
 @Composable
 fun DetailsScreen(navController: NavController, cid: String?, viewModel: DetailsViewModel = viewModel()) {
-    val industries by remember { viewModel.industries }
+    // Observe the organizations state from the ViewModel
+    val organizations by remember { viewModel.organizations }
     val isLoading by remember { viewModel.isLoading }
+    val errorMessage by remember { viewModel.errorMessage }
 
+    // Fetch data when the screen is first composed or when the CID changes
     LaunchedEffect(cid) {
-        cid?.let { viewModel.fetchTopIndustries(it) }
+        cid?.let { viewModel.fetchTopOrganizations(it) }
     }
 
     Column(modifier = Modifier.padding(16.dp)) {
         if (isLoading) {
             Text("Loading...")
+        } else if (errorMessage != null) {
+            Text(text = errorMessage ?: "An unknown error occurred.")
         } else {
             LazyColumn {
-                items(industries) { industry ->
-                    Text(text = "${industry.attributes.industryName}: ${industry.attributes.total}")
+                // Display the list of organizations
+                items(organizations) { organization ->
+                    // Display organization name and total contribution
+                    Text(text = "${organization.attributes.orgName}: ${organization.attributes.total}")
                 }
             }
         }

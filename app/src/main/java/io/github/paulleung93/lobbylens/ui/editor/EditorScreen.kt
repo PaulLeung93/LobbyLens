@@ -87,22 +87,15 @@ fun EditorScreen(
                 val (cid, _) = recognitionResult
                 recognizedCid = cid
                 processingState = "Fetching financial data..."
-                viewModel.fetchTopIndustries(cid)
+                viewModel.fetchTopOrganizations(cid)
 
                 // Wait for the data to be loaded.
-                val topIndustries = snapshotFlow { viewModel.topIndustries.value }
+                snapshotFlow { viewModel.topOrganizations.value }
                     .filter { it.isNotEmpty() }.first()
 
-                processingState = "Creating visualization..."
-                val composedBitmap = ImageUtils.composeImage(
-                    context = context,
-                    baseBitmap = originalBitmap,
-                    mask = mask,
-                    industries = topIndustries,
-                    faceBounds = Rect(face.boundingBox)
-                )
-                displayBitmap = composedBitmap
-                processingState = "Done!"
+                // TODO: Re-enable visualization once ImageUtils is updated for organizations.
+                processingState = "Done! Visualization pending update."
+                displayBitmap = originalBitmap // Temporarily display original image.
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -128,7 +121,7 @@ fun EditorScreen(
                 CircularProgressIndicator(modifier = Modifier.weight(1f))
             }
             
-            if (recognizedCid != null && processingState == "Done!") {
+            if (recognizedCid != null && processingState.startsWith("Done!")) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly

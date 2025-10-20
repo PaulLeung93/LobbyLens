@@ -49,34 +49,56 @@ This structure separates concerns, making the app scalable, testable, and mainta
 ○	home/HomeScreen.kt: The Composable for the main landing screen.
 ○	editor/EditorScreen.kt: The Composable for the main editor/visualization screen.
 ○	editor/EditorViewModel.kt: The ViewModel for EditorScreen; it holds the UI state and orchestrates all AI and data operations for that screen.
-○	details/DetailsScreen.kt: The Composable for the screen showing charts and industry breakdowns.
+	details/DetailsScreen.kt: The Composable for the screen showing charts and industry breakdowns.
 ○	components/: A directory for small, reusable Composables used across multiple screens (e.g., BarChart.kt, ActionButton.kt).
 ○	theme/: Auto-generated files for app styling and colors.
 ●	util/: A package for utility and helper functions.
 ○	ImageUtils.kt: Contains helper functions for bitmap manipulation, saving, and sharing.
 ○	MlKitUtils.kt: Helper functions for ML Kit operations like face detection and segmentation.
+
+### Project Setup & Prerequisites
+
+Before the application can be fully functional, a few manual setup steps are required. The codebase is complete, but it relies on external assets and keys that you must provide.
+
+**1. Obtain an OpenSecrets API Key:**
+*   **Action:** Register for a free API key at [OpenSecrets.org](https://www.opensecrets.org/api/admin/user_register.php).
+*   **Integration:** Open the file `app/src/main/java/io/github/paulleung93/lobbylens/data/network/OpenSecretsApiService.kt` and replace the placeholder `"YOUR_API_KEY_HERE"` with your actual key.
+
+**2. Download the TensorFlow Lite Model:**
+*   **Action:** Download a pre-trained `FaceNet.tflite` model. You can find compatible versions by searching online for "FaceNet tflite model download". You do **not** need to train your own model.
+*   **Integration:** Place the downloaded `FaceNet.tflite` file directly into the `app/src/main/assets/` directory in your project. Create this folder if it doesn't exist.
+
+**3. Generate the Embeddings Database:**
+*   **Action:** This is the most crucial step for facial recognition. You need to create the `embeddings.json` file using the provided offline Python script (`generate_embeddings.py`). This script processes a folder of politician images (ideally named by their OpenSecrets CID, e.g., `N00007360.jpg`) and uses the FaceNet model to create a unique facial "fingerprint" for each one.
+*   **Integration:** Once generated, place the `embeddings.json` file into the same `app/src/main/assets/` directory.
+
+**4. Add Industry Icons:**
+*   **Action:** Create or find simple PNG icons for the various industry sectors you wish to visualize (e.g., Finance, Health, Energy).
+*   **Integration:** Place the icon files into the `app/src/main/res/drawable/` directory. Then, open `app/src/main/java/io/github/paulleung93/lobbylens/util/IndustryIconMapper.kt` and update the placeholder mappings to link the correct industry codes to your new drawable icons.
+    
 Development Plan
 This plan reflects the logical progression from a simple idea to a fully architected application.
-Phase 1: Core Functionality & Data Pipeline (Prototyping)
-●	Objective: Build a functional MVP in a single file to quickly test the core concept.
+Phase 1: Core Functionality & Data Pipeline
+●	Objective: Establish the core MVVM architecture, data layer, and navigation.
 ●	Steps:
-1.	Set up the base project and implement UI for all screens in MainActivity.kt.
-2.	Integrate the OpenSecrets API to fetch data for a hardcoded politician ID.
-3.	Implement the first version of the visualization and the details screen.
-Phase 2: On-Device AI & Feature Expansion (Still in a single file)
+1.	Set up the base project with a professional MVVM structure from the start.
+2.	Implement the Retrofit data layer to fetch politician and industry data from the OpenSecrets API.
+3.	Create ViewModels to manage UI state and interact with the data repository.
+4. Set up the basic navigation graph for the Home, Editor, and Details screens.
+Phase 2: On-Device AI & Feature Expansion
 ●	Objective: Make the app intelligent and add key user-facing features.
 ●	Steps:
 1.	Create the embeddings.json database offline.
-2.	Integrate the TensorFlow Lite FaceRecognizer logic.
-3.	Replace the hardcoded ID with the full facial recognition pipeline.
-4.	Implement Save/Share, manual search, and cycle selection.
-5.	Upgrade visualization logic from logos to industry icons and add the historical data chart.
-Phase 3: Professional Refactor (Final Architecture)
-●	Objective: Refactor the entire project from a single file into a clean, professional MVVM architecture.
+2.	Integrate ML Kit for face detection and selfie segmentation.
+3.	Integrate the TensorFlow Lite FaceRecognizer to identify politicians from an image.
+4.	Implement the full AI pipeline on the EditorScreen, from image selection to recognition.
+5.	Implement the image composition logic to overlay industry icons on the processed image.
+6.	Implement the "Save" and "Share" features.
+Phase 3: Polish and Advanced Features
+●	Objective: Add advanced features, polish the user experience, and make the app production-ready.
 ●	Steps:
-1.	Create the new directory structure (data, domain, ui, util).
-2.	Migrate all data models, networking code, and the repository to the data layer.
-3.	Move the FaceRecognizer to the domain layer.
-4.	Separate each screen's Composables into its own file in the ui layer.
-5.	Create EditorViewModel to manage the state and logic for the EditorScreen.
-6.	Simplify MainActivity.kt to only handle navigation setup.
+1.	**Implement Full Camera Integration:** Enable the "Take Photo" button to launch the device's camera for live image capture and analysis.
+2.	**Add Historical Data & Dynamic Cycle Selection:** Implement a dropdown menu on the `EditorScreen` to allow users to select different election cycles and see how funding changes over time.
+3.	**Build the Advanced Details Screen:** Enhance the `DetailsScreen` to display a bar chart visualizing total donations across multiple election cycles.
+4.	**Implement Robust Error Handling:** Add user-friendly error messages for common issues (e.g., no internet, no face detected, no match found).
+5.	**Add a Caching Layer:** Optimize the `PoliticianRepository` to cache API results, improving performance and reducing API usage.

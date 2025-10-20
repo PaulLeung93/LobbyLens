@@ -71,3 +71,39 @@ data class IndustryAttributes(
     @SerializedName("industry_code") val industryCode: String,
     @SerializedName("total") val total: String
 )
+
+/**
+ * Represents the top-level response for an organization lookup.
+ */
+data class OrganizationResponse(
+    @SerializedName("response") val response: OrganizationsContainer
+)
+
+/**
+ * Container for the organization data within the API response.
+ */
+data class OrganizationsContainer(
+    @SerializedName("organizations") val organizations: Organizations
+)
+
+/**
+ * Holds the list of contributing organizations.
+ */
+data class Organizations(
+    @SerializedName("organization") val organizationList: List<Organization>
+)
+
+/**
+ * Data class representing a single contributing organization.
+ */
+data class Organization(
+    @SerializedName("@attributes") val attributes: OrganizationAttributes
+)
+
+/**
+ * Contains the detailed attributes of a contributing organization.
+ */
+data class OrganizationAttributes(
+    @SerializedName("org_name") val orgName: String,
+    @SerializedName("total") val total: String
+)

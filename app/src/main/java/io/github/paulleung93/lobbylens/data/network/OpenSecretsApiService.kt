@@ -2,6 +2,7 @@ package io.github.paulleung93.lobbylens.data.network
 
 import io.github.paulleung93.lobbylens.data.model.IndustryResponse
 import io.github.paulleung93.lobbylens.data.model.LegislatorResponse
+import io.github.paulleung93.lobbylens.data.model.OrganizationResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -38,4 +39,19 @@ interface OpenSecretsApiService {
         @Query("cycle") cycle: String,
         @Query("apikey") apikey: String = "YOUR_API_KEY_HERE" // TODO: Replace with your API key
     ): IndustryResponse
+
+    /**
+     * Fetches the top contributing organizations for a specific legislator.
+     *
+     * @param cid The legislator's unique campaign ID.
+     * @param cycle The election cycle to query (e.g., "2022").
+     * @param apikey Your personal API key for OpenSecrets.
+     * @return An [OrganizationResponse] containing a list of top organizations.
+     */
+    @GET("candContrib?output=json")
+    suspend fun getTopOrganizations(
+        @Query("cid") cid: String,
+        @Query("cycle") cycle: String,
+        @Query("apikey") apikey: String = "YOUR_API_KEY_HERE" // TODO: Replace with your API key
+    ): OrganizationResponse
 }

@@ -1,8 +1,9 @@
 package io.github.paulleung93.lobbylens.data.repository
 
-import io.github.paulleung93.lobbylens.data.model.LegislatorResponse
-import io.github.paulleung93.lobbylens.data.network.RetrofitInstance
 import io.github.paulleung93.lobbylens.data.model.IndustryResponse
+import io.github.paulleung93.lobbylens.data.model.LegislatorResponse
+import io.github.paulleung93.lobbylens.data.model.OrganizationResponse
+import io.github.paulleung93.lobbylens.data.network.RetrofitInstance
 
 /**
  * Repository for fetching politician data from the OpenSecrets API.
@@ -29,5 +30,15 @@ class PoliticianRepository {
      */
     suspend fun getTopIndustries(cid: String, cycle: String): IndustryResponse {
         return apiService.getTopIndustries(cid = cid, cycle = cycle)
+    }
+
+    /**
+     * Fetches the top contributing organizations for a specific legislator.
+     * @param cid The legislator's unique campaign ID.
+     * @param cycle The election cycle to query.
+     * @return An OrganizationResponse containing the list of top organizations.
+     */
+    suspend fun getTopOrganizations(cid: String, cycle: String): OrganizationResponse {
+        return apiService.getTopOrganizations(cid = cid, cycle = cycle)
     }
 }
