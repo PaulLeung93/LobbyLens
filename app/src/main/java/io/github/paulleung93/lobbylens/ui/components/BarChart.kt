@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BarChart(data: Map<String, Float>) {
     val maxValue = data.values.maxOrNull() ?: 0f
+    // Get the color from the theme here, inside the Composable context.
+    val barColor = MaterialTheme.colorScheme.primary
 
     Column(modifier = Modifier.padding(16.dp)) {
         data.forEach { (label, value) ->
@@ -39,7 +41,8 @@ fun BarChart(data: Map<String, Float>) {
                     .height(20.dp)) {
                     val barWidth = (value / maxValue) * size.width
                     drawRect(
-                        color = MaterialTheme.colorScheme.primary,
+                        // Use the variable that stores the color.
+                        color = barColor,
                         topLeft = Offset(x = 0f, y = 0f),
                         size = Size(width = barWidth, height = size.height)
                     )

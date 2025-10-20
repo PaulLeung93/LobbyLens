@@ -1,12 +1,14 @@
 Project Roadmap: LobbyLens
 Vision: To create a data-driven Android application that provides transparency in politics by visualizing campaign finance data directly onto images of politicians, using on-device AI for recognition and processing.
+
 Core Features
 1.	True Facial Recognition: Utilizes an on-device TensorFlow Lite model (FaceNet) to identify politicians directly from their faces, without relying on text in the image.
 2.	Manual Politician Search: A robust fallback option allowing users to search for any US politician by name, ensuring full accessibility.
-3.	Industry Icon Visualization: Instead of individual company logos, the app visualizes the top contributing industries (e.g., Health, Finance, Defense) using a clean, symbolic icon set. The size of the icon corresponds to the total donation amount from that sector.
+3.	Company Logo Visualization: Instead of generic icons, the app fetches and visualizes the logos of the top contributing organizations. The size of the logo corresponds to the total donation amount from that company.
 4.	Historical Campaign Data: Users can select different election cycles to see how a politician's funding sources have changed over time.
-5.	Detailed Industry Breakdown: A dedicated details screen provides a comprehensive view of the top contributing industries, their total donation amounts, and a historical bar chart showing funding trends across multiple cycles.
+5.	Detailed Organization Breakdown: A dedicated details screen provides a comprehensive view of the top contributing organizations, their total donation amounts, and a historical bar chart showing funding trends across multiple cycles.
 6.	Save & Share: Users can save the final generated image to their device or share it directly to social media and messaging apps.
+
 UI/UX Design
 The app will have a clean, modern, and data-focused interface with three main screens:
 1.	Home Screen:
@@ -17,13 +19,14 @@ The app will have a clean, modern, and data-focused interface with three main sc
 ○	Displays the user's selected image.
 ○	Overlays the processing status (e.g., "Recognizing Face," "Fetching Data...").
 ○	Presents a confirmation dialog after facial recognition is successful.
-○	Renders the final image with industry icons placed on the politician's clothing.
-○	Features a dropdown menu to select the election cycle.
+○	Renders the final image with company logos placed on the politician's clothing.
+○	Features a selector to switch between election cycles.
 ○	Provides "Save," "Share," and "Details" actions.
 3.	Details Screen:
 ○	Displays the politician's name.
 ○	Features a Bar Chart visualizing total donations across multiple election cycles.
-○	Shows a detailed list of the top contributing industries for the selected cycle, with their corresponding icons and total donation amounts.
+○	Shows a detailed list of the top contributing organizations for the selected cycle, with their total donation amounts.
+
 Technical Stack
 ●	Language: Kotlin
 ●	UI Framework: Jetpack Compose
@@ -32,13 +35,15 @@ Technical Stack
 ○	ML Kit: For initial face detection and selfie segmentation.
 ○	TensorFlow Lite: For running the FaceNet model for true facial recognition.
 ●	Networking: Retrofit2 for handling API calls.
+●	Image Loading: Coil for fetching, caching, and displaying company logos.
 ●	API: OpenSecrets.org for all campaign finance data.
-●	Development Workflow: A separate Python script (generate_embeddings.py) is used offline to create the embeddings.json database.
+●	Logo API: A third-party logo-finding service is used to automatically find company logos.
+
 Final Project Architecture (MVVM)
 This structure separates concerns, making the app scalable, testable, and maintainable.
 ●	MainActivity.kt: The single activity entry point; its only job is to host the Jetpack Compose navigation.
 ●	data/: The data layer, responsible for all data sources.
-○	model/Models.kt: Contains all Kotlin data classes (e.g., Industry, Legislator) used for parsing API responses.
+○	model/Models.kt: Contains all Kotlin data classes (e.g., Organization, Legislator) used for parsing API responses.
 ○	network/OpenSecretsApiService.kt: The Retrofit interface defining the API endpoints.
 ○	network/RetrofitInstance.kt: The singleton object that provides a configured Retrofit instance.
 ○	repository/PoliticianRepository.kt: The single source of truth for data; it abstracts away the network calls from the ViewModels.
@@ -49,12 +54,14 @@ This structure separates concerns, making the app scalable, testable, and mainta
 ○	home/HomeScreen.kt: The Composable for the main landing screen.
 ○	editor/EditorScreen.kt: The Composable for the main editor/visualization screen.
 ○	editor/EditorViewModel.kt: The ViewModel for EditorScreen; it holds the UI state and orchestrates all AI and data operations for that screen.
-	details/DetailsScreen.kt: The Composable for the screen showing charts and industry breakdowns.
-○	components/: A directory for small, reusable Composables used across multiple screens (e.g., BarChart.kt, ActionButton.kt).
+	details/DetailsScreen.kt: The Composable for the screen showing charts and organization breakdowns.
+○	components/: A directory for small, reusable Composables used across multiple screens (e.g., BarChart.kt).
 ○	theme/: Auto-generated files for app styling and colors.
 ●	util/: A package for utility and helper functions.
 ○	ImageUtils.kt: Contains helper functions for bitmap manipulation, saving, and sharing.
 ○	MlKitUtils.kt: Helper functions for ML Kit operations like face detection and segmentation.
+○	LogoUtils.kt: A helper utility for fetching company logos.
+○	Result.kt: A generic wrapper for handling operations that can succeed or fail.
 
 ### Project Setup & Prerequisites
 
@@ -72,10 +79,6 @@ Before the application can be fully functional, a few manual setup steps are req
 *   **Action:** This is the most crucial step for facial recognition. You need to create the `embeddings.json` file using the provided offline Python script (`generate_embeddings.py`). This script processes a folder of politician images (ideally named by their OpenSecrets CID, e.g., `N00007360.jpg`) and uses the FaceNet model to create a unique facial "fingerprint" for each one.
 *   **Integration:** Once generated, place the `embeddings.json` file into the same `app/src/main/assets/` directory.
 
-**4. Add Industry Icons:**
-*   **Action:** Create or find simple PNG icons for the various industry sectors you wish to visualize (e.g., Finance, Health, Energy).
-*   **Integration:** Place the icon files into the `app/src/main/res/drawable/` directory. Then, open `app/src/main/java/io/github/paulleung93/lobbylens/util/IndustryIconMapper.kt` and update the placeholder mappings to link the correct industry codes to your new drawable icons.
-    
 Development Plan
 This plan reflects the logical progression from a simple idea to a fully architected application.
 Phase 1: Core Functionality & Data Pipeline
@@ -85,20 +88,30 @@ Phase 1: Core Functionality & Data Pipeline
 2.	Implement the Retrofit data layer to fetch politician and industry data from the OpenSecrets API.
 3.	Create ViewModels to manage UI state and interact with the data repository.
 4. Set up the basic navigation graph for the Home, Editor, and Details screens.
+
 Phase 2: On-Device AI & Feature Expansion
 ●	Objective: Make the app intelligent and add key user-facing features.
 ●	Steps:
 1.	Create the embeddings.json database offline.
 2.	Integrate ML Kit for face detection and selfie segmentation.
 3.	Integrate the TensorFlow Lite FaceRecognizer to identify politicians from an image.
-4.	Implement the full AI pipeline on the EditorScreen, from image selection to recognition.
-5.	Implement the image composition logic to overlay industry icons on the processed image.
+4.  Implement the full AI pipeline on the EditorScreen, from image selection to recognition.
+5.	Implement the image composition logic to overlay company logos on the processed image.
 6.	Implement the "Save" and "Share" features.
+
 Phase 3: Polish and Advanced Features
 ●	Objective: Add advanced features, polish the user experience, and make the app production-ready.
 ●	Steps:
-1.	**Implement Full Camera Integration:** Enable the "Take Photo" button to launch the device's camera for live image capture and analysis.
-2.	**Add Historical Data & Dynamic Cycle Selection:** Implement a dropdown menu on the `EditorScreen` to allow users to select different election cycles and see how funding changes over time.
-3.	**Build the Advanced Details Screen:** Enhance the `DetailsScreen` to display a bar chart visualizing total donations across multiple election cycles.
-4.	**Implement Robust Error Handling:** Add user-friendly error messages for common issues (e.g., no internet, no face detected, no match found).
-5.	**Add a Caching Layer:** Optimize the `PoliticianRepository` to cache API results, improving performance and reducing API usage.
+1.	**DONE: Implement Full Camera Integration:** Enable the "Take Photo" button to launch the device's camera for live image capture and analysis.
+2.	**DONE: Add Historical Data & Dynamic Cycle Selection:** Implement a selector on the `EditorScreen` to allow users to select different election cycles and see how funding changes over time.
+3.	**DONE: Build the Advanced Details Screen:** Enhance the `DetailsScreen` to display a bar chart visualizing total donations across multiple election cycles.
+4.  **DONE: Implement Robust Error Handling:** Add user-friendly error messages for common issues (e.g., no internet, no face detected, no match found) using a `Result` wrapper.
+5.  **DONE: Add a Caching Layer:** Optimize the `PoliticianRepository` to cache API results, improving performance and reducing API usage.
+
+Phase 4: Production Readiness
+●	Objective: Ensure the app is stable, polished, and ready for a public release.
+●	Steps:
+1.	**Write Unit Tests:** Create unit tests for the ViewModels (`EditorViewModel`, `DetailsViewModel`) to verify business logic and prevent regressions.
+2.	**Write Instrumentation Tests:** Create basic UI tests to ensure key user flows are working correctly.
+3.	**Final UI/UX Polish:** Conduct a full review of the application to identify and fix any inconsistencies in design, layout, or user experience.
+4.	**Prepare for Publishing:** Create the necessary release assets, including high-resolution app icons, feature graphics, and store screenshots. Write the app's official store listing description.
