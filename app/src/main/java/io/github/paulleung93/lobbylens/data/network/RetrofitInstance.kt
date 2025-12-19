@@ -18,7 +18,7 @@ object RetrofitInstance {
      * Creates an OkHttpClient that adds the FEC API key as a query parameter to every request.
      * This is the standard way to handle API key authentication with Retrofit.
      */
-    private val httpClient = OkHttpClient.Builder().addInterceptor { chain ->
+    private val fecHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
         val original = chain.request()
         val originalHttpUrl = original.url
 
@@ -35,12 +35,39 @@ object RetrofitInstance {
      * Lazily creates and configures a Retrofit instance for the new FEC API service.
      * The lazy delegate ensures that the instance is created only once, when it's first needed.
      */
+    /**
+     * Lazily creates and configures a Retrofit instance for the new FEC API service.
+     */
     val api: FecApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(httpClient) // Use the client with the authentication interceptor
+            .client(fecHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(FecApiService::class.java)
+    }
+
+    private const val VISION_BASE_URL = "https://vision.googleapis.com/"
+
+    val cloudVisionApi: CloudVisionService by lazy {
+        Retrofit.Builder()
+            .baseUrl(VISION_BASE_URL)
+            .client(OkHttpClient())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CloudVisionService::class.java)
+    }
+
+    // Defaulting to us-central1 for now. 
+    // Ideally this should be dynamic based on BuildConfig.GOOGLE_CLOUD_LOCATION but Retrofit BaseURL is static.
+    private const val VERTEX_AI_BASE_URL = "https://us-central1-aiplatform.googleapis.com/"
+
+    val vertexAiApi: VertexAiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(VERTEX_AI_BASE_URL)
+            .client(OkHttpClient())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(VertexAiService::class.java)
     }
 }

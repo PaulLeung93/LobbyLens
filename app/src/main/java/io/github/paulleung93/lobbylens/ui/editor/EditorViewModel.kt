@@ -25,6 +25,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     val candidates = mutableStateOf<List<FecCandidate>>(emptyList())
     val topOrganizations = mutableStateOf<List<FecEmployerContribution>>(emptyList())
     val organizationLogos = mutableStateOf<Map<String, Bitmap>>(emptyMap())
+    val generatedImage = mutableStateOf<Bitmap?>(null) // New state for Vertex AI result
     val isLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
     val selectedCycle = mutableStateOf("2024") // Default to the most recent cycle
@@ -71,8 +72,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 is Result.Success -> {
                     val newOrganizations = result.data.results
                     topOrganizations.value = newOrganizations
-                    // Now, fetch the logos for these new organizations
-                    fetchOrganizationLogos(newOrganizations)
+                    // Logos are no longer needed for Generative AI, but we might want them for Details screen.
+                    // For Generative AI, we pass names.
+                    // fetchOrganizationLogos(newOrganizations) 
                 }
                 is Result.Error -> {
                     errorMessage.value = "Failed to fetch organization data for cycle $cycle: ${result.exception.message}"
@@ -100,5 +102,56 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             }
             organizationLogos.value = logos
         }
+        /**
+     * Identifies a politician from an image using Cloud Vision.
+     */
+    fun identifyPolitician(bitmap: Bitmap) {
+        viewModelScope.launch {
+            isLoading.value = true
+            errorMessage.value = null
+            
+            when (val result = repository.identifyPolitician(bitmap)) {
+                is Result.Success -> {
+                    val candidate = result.data
+                    candidates.value = listOf(candidate)
+                    // Auto-fetch details
+                    fetchTopOrganizations(candidate.candidateId, selectedCycle.value)
+                }
+                is Result.Error -> {
+                    errorMessage.value = "Identification failed: ${result.exception.message}"
+                }
+                else -> {}
+            }
+            isLoading.value = false
+        }
     }
+
+    /**
+     * Generates the final image using Vertex AI.
+     */
+    fun generateImage(originalBitmap: Bitmap) {
+        viewModelScope.launch {
+            isLoading.value = true
+            errorMessage.value = null
+            
+            val companies = topOrganizations.value.map { it.employer }.take(5) // Limit to top 5
+            if (companies.isEmpty()) {
+                errorMessage.value = "No organizations found to display."
+                isLoading.value = false
+                return@launch
+            }
+
+            when (val result = repository.generatePoliticianImage(originalBitmap, companies)) {
+                 is Result.Success -> {
+                     generatedImage.value = result.data
+                 }
+                 is Result.Error -> {
+                     errorMessage.value = "Generation failed: ${result.exception.message}"
+                 }
+                 else -> {}
+            }
+            isLoading.value = false
+        }
+    }
+}
 }

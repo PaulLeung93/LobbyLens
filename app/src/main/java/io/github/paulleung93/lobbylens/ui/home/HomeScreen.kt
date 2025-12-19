@@ -96,120 +96,138 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
 
     // The entire screen is a Box to allow for alignment of elements
     // at the top and bottom of the screen.
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 32.dp)
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize()
     ) {
-        // Main content area, aligned to the top center.
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
-            Spacer(modifier = Modifier.height(64.dp))
-
-            // App Logo and Title
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    // Note: Ensure you have 'ic_logo.xml' in your 'res/drawable' folder.
-                    painter = painterResource(id = R.drawable.ic_logo),
-                    contentDescription = "LobbyLens Logo",
-                    modifier = Modifier.size(40.dp),
-                    // Use Color.Unspecified to render the original drawable colors.
-                    tint = Color.Unspecified
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "LobbyLens",
-                    style = MaterialTheme.typography.headlineLarge
-                )
-            }
-
-            // Spacer to push buttons down.
-            Spacer(modifier = Modifier.height(150.dp))
-
-            // "Take Photo" button, styled as the primary action.
-            Button(
-                onClick = {
-                    if (hasCameraPermission) {
-                        // Create a temporary file to store the captured image.
-                        val uri = createImageUri(context)
-                        tempImageUri = uri
-                        cameraLauncher.launch(uri)
-                    } else {
-                        // Request camera permission.
-                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                    }
-                },
+            // Main content area, aligned to the top center.
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp)
+                    .align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.PhotoCamera,
-                    contentDescription = "Take Photo"
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Take Photo")
-            }
+                Spacer(modifier = Modifier.height(64.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // "Select from Gallery" button, styled as the secondary action.
-            Button(
-                onClick = { galleryLauncher.launch("image/*") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE8E8E8), // Light gray from wireframe
-                    contentColor = Color.DarkGray
-                )
-            ) {
-                Icon(
-                    // Using a default icon as a placeholder.
-                    imageVector = Icons.Filled.Collections,
-                    contentDescription = "Select from Gallery"
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Select from Gallery")
-            }
-        }
-
-        // A fake search bar at the bottom of the screen.
-        // It looks like a TextField but navigates to the manual search screen on click.
-        // This preserves the existing navigation flow without major refactoring.
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .clickable { navController.navigate("editor") },
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0xFFF0F0F0), // A very light gray for the background
-            border = BorderStroke(1.dp, Color(0xFFE0E0E0))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search Icon",
-                    tint = Color.Gray
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                // App Logo and Title
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_logo),
+                        contentDescription = "LobbyLens Logo",
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "LobbyLens",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 Text(
-                    text = "Or search for a politician...",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.bodyLarge
+                    text = "Transparency in your pocket.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 8.dp)
                 )
+
+                // Spacer to push buttons down.
+                Spacer(modifier = Modifier.height(120.dp))
+
+                // "Take Photo" button, styled as the primary action.
+                Button(
+                    onClick = {
+                        if (hasCameraPermission) {
+                            val uri = createImageUri(context)
+                            tempImageUri = uri
+                            cameraLauncher.launch(uri)
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = "Take Photo"
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Scan Politician",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // "Select from Gallery" button, styled as the secondary action.
+                Button(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Collections,
+                        contentDescription = "Select from Gallery"
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Upload Photo",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            }
+
+            // A fake search bar at the bottom of the screen.
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("editor") },
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search Icon",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Or search manually...",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
             }
         }
     }

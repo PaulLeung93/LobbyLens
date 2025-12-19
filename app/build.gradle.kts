@@ -33,6 +33,21 @@ android {
             "FEC_API_KEY",
             "\"${localProperties.getProperty("FEC_API_KEY") ?: ""}\""
         )
+        buildConfigField(
+            "String",
+            "GOOGLE_API_KEY",
+            "\"${localProperties.getProperty("GOOGLE_API_KEY") ?: ""}\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_CLOUD_PROJECT_ID",
+            "\"${localProperties.getProperty("GOOGLE_CLOUD_PROJECT_ID") ?: ""}\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_CLOUD_LOCATION",
+            "\"${localProperties.getProperty("GOOGLE_CLOUD_LOCATION") ?: "us-central1"}\""
+        )
     }
 
     buildTypes {
@@ -72,10 +87,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.mlkit.face.detection)
-    implementation(libs.mlkit.selfie.segmentation)
-    implementation(libs.tensorflow.lite)
-    implementation(libs.tensorflow.lite.gpu)
+
     implementation(libs.coil.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

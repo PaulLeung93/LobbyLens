@@ -5,12 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
-import com.google.mlkit.vision.segmentation.SegmentationMask
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
 import java.io.File
 import java.io.FileOutputStream
@@ -33,70 +31,14 @@ object ImageUtils {
      * @param faceBounds The bounding box of the detected face, to avoid drawing over it.
      * @return A new bitmap with the data overlays.
      */
-    fun composeImage(
-        baseBitmap: Bitmap,
-        mask: SegmentationMask,
-        organizations: List<FecEmployerContribution>, // CORRECTED: Use the new FEC data model
-        logos: Map<String, Bitmap>,
-        faceBounds: Rect
-    ): Bitmap {
-        val mutableBitmap = baseBitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val canvas = Canvas(mutableBitmap)
-
-        // CORRECTED: Use the 'total' property from the new data model
-        val maxDonation = organizations.maxOfOrNull { it.total } ?: 1.0
-        val minIconSize = (mutableBitmap.width * 0.1).toInt()
-        val maxIconSize = (mutableBitmap.width * 0.25).toInt()
-
-        val occupiedAreas = mutableListOf(faceBounds)
-
-        organizations.forEach { organization ->
-            // CORRECTED: Use the 'employer' property to get the logo
-            val iconBitmap = logos[organization.employer] ?: return@forEach
-
-            // CORRECTED: Use the 'total' property for donation amount
-            val donation = organization.total
-            val scale = (donation / maxDonation)
-            val size = (minIconSize + (maxIconSize - minIconSize) * sqrt(scale)).toInt().coerceAtLeast(1)
-
-            val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, size, size, true)
-
-            val position = findNextAvailablePosition(mask, size, occupiedAreas)
-            position?.let {
-                canvas.drawBitmap(scaledIcon, it.x.toFloat(), it.y.toFloat(), null)
-                occupiedAreas.add(Rect(it.x, it.y, it.x + size, it.y + size))
-            }
-        }
-
-        return mutableBitmap
-    }
-
     /**
-     * Finds an available position to place an icon, avoiding occupied areas.
+     * Converts a Bitmap to a Base64 encoded string (JPEG format).
      */
-    private fun findNextAvailablePosition(
-        mask: SegmentationMask,
-        iconSize: Int,
-        occupiedRects: List<Rect>
-    ): android.graphics.Point? {
-        val maskBuffer = mask.buffer
-        val maskWidth = mask.width
-        val maskHeight = mask.height
-
-        val step = iconSize / 4
-        for (y in (maskHeight / 2) until (maskHeight - iconSize) step step) {
-            for (x in (maskWidth / 4) until (maskWidth - (maskWidth / 4) - iconSize) step step) {
-
-                val maskConfidence = maskBuffer.getFloat((y + iconSize / 2) * maskWidth + (x + iconSize / 2))
-                if (maskConfidence < 0.9) continue
-
-                val newRect = Rect(x, y, x + iconSize, y + iconSize)
-                if (occupiedRects.none { it.intersect(newRect) }) {
-                    return android.graphics.Point(x, y)
-                }
-            }
-        }
-        return null
+    fun bitmapToBase64(bitmap: Bitmap): String {
+        val outputStream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+        val byteArray = outputStream.toByteArray()
+        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
     }
 
     fun saveImageToGallery(context: Context, bitmap: Bitmap, displayName: String): Uri? {

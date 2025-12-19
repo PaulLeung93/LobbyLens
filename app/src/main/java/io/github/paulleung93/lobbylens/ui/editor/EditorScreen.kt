@@ -23,11 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.google.mlkit.vision.face.Face
-import com.google.mlkit.vision.segmentation.SegmentationMask
-import io.github.paulleung93.lobbylens.domain.ai.FaceRecognizer
 import io.github.paulleung93.lobbylens.util.ImageUtils
-import io.github.paulleung93.lobbylens.util.MlKitUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.net.URLDecoder
@@ -44,84 +40,48 @@ fun EditorScreen(
     val candidates by remember { viewModel.candidates }
     val isLoading by remember { viewModel.isLoading }
     val topOrganizations by remember { viewModel.topOrganizations }
-    val organizationLogos by remember { viewModel.organizationLogos }
+    val generatedImage by remember { viewModel.generatedImage }
     val selectedCycle by remember { viewModel.selectedCycle }
 
     // State for the image processing pipeline
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var composedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var selfieMask by remember { mutableStateOf<SegmentationMask?>(null) }
-    var detectedFace by remember { mutableStateOf<Face?>(null) }
     var processingState by remember { mutableStateOf("Idle") }
     var recognizedCid by remember { mutableStateOf<String?>(null) }
 
-    val displayBitmap = composedBitmap ?: originalBitmap
+    // Display generated image if available, otherwise original
+    val displayBitmap = generatedImage ?: originalBitmap
 
-    if (imageUri != null) {
-        // Effect 1: One-time recognition pipeline.
+    // Sync processing state with ViewModel
+    LaunchedEffect(isLoading, viewModel.errorMessage.value) {
+        if (isLoading) {
+             processingState = if (generatedImage == null && candidates.isEmpty()) "Identifying..." else "Generating Visualization..."
+        } else if (viewModel.errorMessage.value != null) {
+             processingState = viewModel.errorMessage.value!!
+        } else if (generatedImage != null) {
+             processingState = "Done!"
+        }
+    }
+
+        if (imageUri != null) {
+        // Effect 1: Load image and Identify
         LaunchedEffect(imageUri) {
-            try {
-                processingState = "Loading image..."
-                val decodedUri = URLDecoder.decode(imageUri, StandardCharsets.UTF_8.toString())
-                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(decodedUri)))
-                } else {
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(decodedUri))
-                }.copy(Bitmap.Config.ARGB_8888, true)
-                originalBitmap = bitmap
-
-                processingState = "Analyzing image..."
-                val (faces, mask) = coroutineScope {
-                    val faceDetectionJob = async { MlKitUtils.detectFaces(bitmap) }
-                    val segmentationJob = async { MlKitUtils.segmentSelfie(bitmap) }
-                    faceDetectionJob.await() to segmentationJob.await()
-                }
-                selfieMask = mask
-
-                if (faces.isEmpty() || mask == null) {
-                    processingState = "Could not detect a person or face. Please try another photo."
-                    return@LaunchedEffect
-                }
-                val face = faces.first()
-                detectedFace = face
-
-                processingState = "Recognizing politician..."
-                val croppedFace = Bitmap.createBitmap(bitmap, face.boundingBox.left, face.boundingBox.top, face.boundingBox.width(), face.boundingBox.height())
-                val faceRecognizer = FaceRecognizer(context)
-                val recognitionResult = faceRecognizer.recognize(croppedFace)
-
-                if (recognitionResult == null) {
-                    processingState = "Recognition failed. Please try another photo or search manually."
-                    return@LaunchedEffect
-                }
-
-                val (politicianCid, _) = recognitionResult
-                recognizedCid = politicianCid
-                viewModel.fetchTopOrganizations(politicianCid, selectedCycle)
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                processingState = "An error occurred: ${e.message}"
-            }
+             processingState = "Loading image..."
+             val decodedUri = URLDecoder.decode(imageUri, StandardCharsets.UTF_8.toString())
+             val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                 ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(decodedUri)))
+             } else {
+                 MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(decodedUri))
+             }.copy(Bitmap.Config.ARGB_8888, true)
+             originalBitmap = bitmap
+             
+             // Trigger Identification
+             viewModel.identifyPolitician(bitmap)
         }
 
-        // Effect 2: Image composition pipeline.
-        LaunchedEffect(organizationLogos) {
-            if (organizationLogos.isNotEmpty() && topOrganizations.isNotEmpty() && originalBitmap != null && selfieMask != null && detectedFace != null) {
-                processingState = "Composing final image..."
-                composedBitmap = ImageUtils.composeImage(
-                    baseBitmap = originalBitmap!!,
-                    mask = selfieMask!!,
-                    organizations = topOrganizations,
-                    logos = organizationLogos,
-                    faceBounds = detectedFace!!.boundingBox
-                )
-                processingState = "Done!"
-            } else if (recognizedCid != null) {
-                composedBitmap = null
-                if (isLoading) {
-                    processingState = "Fetching data for $selectedCycle..."
-                }
+        // Effect 2: Generate Image when organizations are found
+        LaunchedEffect(topOrganizations) {
+            if (topOrganizations.isNotEmpty() && originalBitmap != null && generatedImage == null) {
+                 viewModel.generateImage(originalBitmap!!)
             }
         }
 
