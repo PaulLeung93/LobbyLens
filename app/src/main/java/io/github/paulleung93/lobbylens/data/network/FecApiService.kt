@@ -21,10 +21,15 @@ interface FecApiService {
         @Query("q") query: String
     ): FecCandidateResponse
 
+    @GET("candidate/{candidate_id}")
+    suspend fun getCandidateDetails(
+        @retrofit2.http.Path("candidate_id") candidateId: String
+    ): retrofit2.Response<io.github.paulleung93.lobbylens.data.model.FecCandidate>
+
     // Fetch top contributions by employer
     @GET("schedules/schedule_a/by_employer/")
     suspend fun getTopOrganizationsByEmployer(
-        @Query("committee_id") candidateId: String, // Note: FEC API often links via committee_id or candidate_id depending on endpoint. Assuming candidate_id works or we map it.
+        @Query("committee_id") committeeId: String,
         @Query("cycle") cycle: String,
         @Query("sort_hide_null") sortHideNull: Boolean = false,
         @Query("sort") sort: String = "-total",

@@ -25,7 +25,74 @@ data class FecCandidate(
     val name: String,
 
     @SerializedName("office_sought")
-    val officeSought: String?
+    val officeSought: String?,
+
+    @SerializedName("principal_committees")
+    val principalCommittees: List<FecCommittee>? = null
+)
+
+/**
+ * Represents a committee (principally a campaign committee) associated with a candidate.
+ */
+data class FecCommittee(
+    @SerializedName("committee_id")
+    val committeeId: String,
+
+    @SerializedName("name")
+    val name: String,
+
+    @SerializedName("committee_type")
+    val committeeType: String?
+)
+
+/**
+ * Represents the top-level response from the FEC's /candidate/{candidate_id}/history endpoint.
+ */
+data class FecCandidateHistoryResponse(
+    @SerializedName("results")
+    val results: List<FecCandidateHistory>
+)
+
+/**
+ * Represents a historical record for a candidate in a specific two-year period.
+ */
+data class FecCandidateHistory(
+    @SerializedName("candidate_id")
+    val candidateId: String,
+
+    @SerializedName("two_year_period")
+    val twoYearPeriod: Int,
+
+    @SerializedName("principal_committees")
+    val principalCommittees: List<FecCommittee>? = null
+)
+
+/**
+ * Represents the top-level response from the FEC's /candidate/{candidate_id}/committees/history endpoint.
+ */
+data class FecCommitteeHistoryResponse(
+    @SerializedName("results")
+    val results: List<FecCommitteeHistory>
+)
+
+/**
+ * Represents a historical record of a committee assignment for a candidate.
+ */
+data class FecCommitteeHistory(
+    @SerializedName("committee_id")
+    val committeeId: String,
+
+    @SerializedName("designation")
+    val designation: String?,
+
+    @SerializedName("designation_full")
+    val designationFull: String?,
+
+    @SerializedName("cycle")
+    val cycle: Int,
+
+    @SerializedName("name")
+    val name: String
 )
 
 /**

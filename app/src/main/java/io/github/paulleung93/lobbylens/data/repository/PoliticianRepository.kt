@@ -55,18 +55,81 @@ class PoliticianRepository {
     }
 
     /**
-     * Fetches top contributing organizations (by employer) for a given candidate and cycle.
+     * Fetches detailed information for a candidate, including principal committees.
      */
-    suspend fun getTopOrganizations(cid: String, cycle: String): Result<FecEmployerContributionResponse> {
-        Log.d(TAG, "getTopOrganizations: Fetching for cid=$cid, cycle=$cycle")
-        val cacheKey = "$cid-$cycle"
+    /**
+     * Fetches detailed information for a candidate, including principal committees.
+     */
+    suspend fun getCandidateDetails(candidateId: String): Result<FecCandidateResponse> {
+        return try {
+            val response = apiService.getCandidateDetails(candidateId = candidateId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.Success(response.body()!!)
+            } else {
+                Result.Error(Exception("API Error: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
+    }
+
+    /**
+     * Fetches historical data, which is better for finding principal committees.
+     */
+    suspend fun getCandidateHistory(candidateId: String): Result<io.github.paulleung93.lobbylens.data.model.FecCandidateHistoryResponse> {
+        Log.d(TAG, "getCandidateHistory: Fetching history for $candidateId")
+        return try {
+            val response = apiService.getCandidateHistory(candidateId = candidateId)
+            Log.d(TAG, "getCandidateHistory: Response code: ${response.code()}")
+            if (response.isSuccessful && response.body() != null) {
+                val result = Result.Success(response.body()!!)
+                Log.d(TAG, "getCandidateHistory: Success, found ${result.data.results.size} history records")
+                result
+            } else {
+                Log.e(TAG, "getCandidateHistory: API Error: ${response.message()}")
+                Result.Error(Exception("API Error: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+             Log.e(TAG, "getCandidateHistory: Exception occurred", e)
+             Result.Error(e)
+        }
+    }
+
+    /**
+     * Fetches committee history for a candidate, which explicitly links committee assignments to cycles.
+     */
+    suspend fun getCandidateCommitteeHistory(candidateId: String): Result<io.github.paulleung93.lobbylens.data.model.FecCommitteeHistoryResponse> {
+        Log.d(TAG, "getCandidateCommitteeHistory: Fetching committee history for $candidateId")
+        return try {
+            val response = apiService.getCandidateCommitteeHistory(candidateId = candidateId)
+            Log.d(TAG, "getCandidateCommitteeHistory: Response code: ${response.code()}")
+            if (response.isSuccessful && response.body() != null) {
+                val result = Result.Success(response.body()!!)
+                Log.d(TAG, "getCandidateCommitteeHistory: Success, found ${result.data.results.size} committee records")
+                result
+            } else {
+                Log.e(TAG, "getCandidateCommitteeHistory: API Error: ${response.message()}")
+                Result.Error(Exception("API Error: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+             Log.e(TAG, "getCandidateCommitteeHistory: Exception occurred", e)
+             Result.Error(e)
+        }
+    }
+
+    /**
+     * Fetches top contributing organizations (by employer) for a given committee (principal campaign committee) and cycle.
+     */
+    suspend fun getTopOrganizations(committeeId: String, cycle: String): Result<FecEmployerContributionResponse> {
+        Log.d(TAG, "getTopOrganizations: Fetching for committeeId=$committeeId, cycle=$cycle")
+        val cacheKey = "$committeeId-$cycle"
         organizationsCache[cacheKey]?.let {
             Log.d(TAG, "getTopOrganizations: Returning cached result")
             return it
         }
 
         return try {
-            val response = apiService.getTopOrganizationsByEmployer(candidateId = cid, cycle = cycle)
+            val response = apiService.getTopOrganizationsByEmployer(committeeId = committeeId, cycle = cycle)
             Log.d(TAG, "getTopOrganizations: Response code: ${response.code()}")
             if (response.isSuccessful && response.body() != null) {
                 val result = Result.Success(response.body()!!)

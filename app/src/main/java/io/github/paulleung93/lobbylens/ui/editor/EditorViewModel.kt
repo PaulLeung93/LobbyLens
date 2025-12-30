@@ -77,7 +77,42 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             topOrganizations.value = emptyList()
             organizationLogos.value = emptyMap()
 
-            when (val result = repository.getTopOrganizations(cid, cycle)) {
+            // Step 1: Fetch Candidate Committee History to get a valid Principal Committee ID
+            var committeeId: String? = null
+            // We need to resolve the committee ID first. We want the Principal Campaign Committee ("P").
+            when (val historyResult = repository.getCandidateCommitteeHistory(cid)) {
+                is Result.Success -> {
+                    // Sort descending by cycle to get the latest
+                    val historySorted = historyResult.data.results.sortedByDescending { it.cycle }
+                    
+                    // Find the first Principal Campaign Committee (designation = "P")
+                    val principalCommittee = historySorted.firstOrNull { 
+                        it.designation == "P" 
+                    }
+
+                    if (principalCommittee != null) {
+                        committeeId = principalCommittee.committeeId
+                    } else {
+                        Log.w(TAG, "fetchTopOrganizations: No principal committee (designation='P') found for candidate $cid")
+                        errorMessage.value = "No principal campaign committee found."
+                    }
+                }
+                is Result.Error -> {
+                    Log.e(TAG, "fetchTopOrganizations: Failed to fetch candidate committee history: ${historyResult.exception.message}")
+                    errorMessage.value = "Failed to load committee history."
+                }
+                else -> {
+                    Log.d(TAG, "fetchTopOrganizations: Candidate history is loading or in an unknown state.")
+                }
+            }
+
+            if (committeeId == null) {
+                isLoading.value = false
+                return@launch
+            }
+
+            // Step 2: Fetch Contribution Data using the resolved Committee ID
+            when (val result = repository.getTopOrganizations(committeeId, cycle)) {
                 is Result.Success -> {
                     val newOrganizations = result.data.results
                     Log.i(TAG, "fetchTopOrganizations: Success - found ${newOrganizations.size} organizations")

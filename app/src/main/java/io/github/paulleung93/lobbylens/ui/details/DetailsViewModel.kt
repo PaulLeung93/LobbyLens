@@ -33,20 +33,58 @@ class DetailsViewModel : ViewModel() {
      * @param cid The campaign ID of the politician.
      */
     fun fetchHistoricalData(cid: String) {
-        Log.d(TAG, "fetchHistoricalData: Starting fetch for cid=$cid")
+
         viewModelScope.launch {
             isLoading.value = true
             errorMessage.value = null
             historicalOrganizations.value = emptyMap()
 
-            val cycles = listOf("2024", "2022", "2020")
-            Log.d(TAG, "fetchHistoricalData: Fetching data for cycles: $cycles")
+            // Step 1: Fetch Candidate Committee History to get a valid Principal Committee ID
+            var committeeId: String? = null
+            // We need to resolve the committee ID first. We want the Principal Campaign Committee ("P").
+            when (val historyResult = repository.getCandidateCommitteeHistory(cid)) {
+                is Result.Success -> {
+                    // Sort descending by cycle to get the latest
+                    val historySorted = historyResult.data.results.sortedByDescending { it.cycle }
+                    
+                    // Find the first Principal Campaign Committee (designation = "P")
+                    // If no principal committee is found, fallback to any committee or handle error.
+                    val principalCommittee = historySorted.firstOrNull { 
+                        it.designation == "P" 
+                    }
 
-            // Step 1: Launch all API calls in parallel. Each job will return a Pair.
+                    if (principalCommittee != null) {
+                        committeeId = principalCommittee.committeeId
+                    } else {
+                        Log.w(TAG, "fetchHistoricalData: No principal committee (designation='P') found for candidate $cid")
+                        // Fallback: Try to find any committee if P is missing, or strictly require P.
+                        // Sticking to P for accuracy as per plan.
+                        errorMessage.value = "No principal campaign committee found."
+                    }
+                }
+                is Result.Error -> {
+                    Log.e(TAG, "fetchHistoricalData: Failed to fetch candidate committee history: ${historyResult.exception.message}")
+                    errorMessage.value = "Failed to load committee history."
+                }
+                else -> {
+                    Log.d(TAG, "fetchHistoricalData: Candidate history is loading or in an unknown state.")
+                }
+            }
+
+            if (committeeId == null) {
+                isLoading.value = false
+                return@launch
+            }
+
+            // Step 2: Fetch Contribution Data using the resolved Committee ID
+            val cycles = listOf("2024", "2022", "2020")
+            Log.d(TAG, "fetchHistoricalData: Fetching data for committeeId=$committeeId, cycles=$cycles")
+
+            // Launch all API calls in parallel. Each job will return a Pair.
             val deferredResults = cycles.map { cycle ->
                 async {
                     Log.d(TAG, "fetchHistoricalData: Launching fetch for cycle $cycle")
-                    when (val result = repository.getTopOrganizations(cid, cycle)) {
+                    when (val result = repository.getTopOrganizations(committeeId, cycle)) {
                         is Result.Success -> {
                             Log.d(TAG, "fetchHistoricalData: Success for cycle $cycle - ${result.data.results.size} organizations")
                             cycle to result.data.results
@@ -55,7 +93,7 @@ class DetailsViewModel : ViewModel() {
                             Log.e(TAG, "fetchHistoricalData: Error for cycle $cycle - ${result.exception.message}", result.exception)
                             cycle to null
                         }
-                        // For any error or other state, treat it as a null result. This makes the 'when' exhaustive.
+                        // For any error or other state, treat it as a null result.
                         else -> {
                             Log.w(TAG, "fetchHistoricalData: Unknown result for cycle $cycle")
                             cycle to null
@@ -64,22 +102,20 @@ class DetailsViewModel : ViewModel() {
                 }
             }
 
-            // Step 2: CORRECTLY wait for all the parallel jobs to complete BEFORE processing.
+            // Wait for all the parallel jobs to complete
             val results = deferredResults.awaitAll()
             Log.d(TAG, "fetchHistoricalData: All requests completed. Processing results...")
 
-            // Step 3: Process the now-completed results. Filter out any failed (null) cycles and convert to a map.
+            // Process results
             val successfulData = results.mapNotNull { (cycle, contributions) ->
-                // Sort contributions by total amount descending
                 contributions?.let { 
                     cycle to it.sortedByDescending { item -> item.total }
                 }
             }.toMap()
             Log.d(TAG, "fetchHistoricalData: Successful cycles: ${successfulData.keys}, total organizations: ${successfulData.values.sumOf { it.size }}")
 
-            // Step 4: Update the UI state based on the final, processed data.
+            // Update UI state
             if (successfulData.isEmpty() && results.any { it.second == null }) {
-                // Show an error only if at least one request failed AND no data was successfully retrieved.
                 Log.e(TAG, "fetchHistoricalData: All requests failed or returned no data")
                 errorMessage.value = "Failed to fetch historical data. Please check your connection."
             } else {

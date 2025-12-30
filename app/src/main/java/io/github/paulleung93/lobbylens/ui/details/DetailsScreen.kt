@@ -75,6 +75,8 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     }
                 }
 
+
+
                 // Header & Filter Chips
                 androidx.compose.foundation.layout.Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
