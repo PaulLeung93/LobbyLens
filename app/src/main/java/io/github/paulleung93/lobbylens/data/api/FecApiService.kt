@@ -34,10 +34,13 @@ interface FecApiService {
      * @param cycle The election cycle.
      * @return A [FecEmployerContributionResponse] containing the aggregated contributions.
      */
-    @GET("receipts/by_employer")
+    @GET("schedules/schedule_a/by_employer/")
     suspend fun getTopOrganizationsByEmployer(
         @Query("api_key") apiKey: String = BuildConfig.FEC_API_KEY,
         @Query("candidate_id") candidateId: String,
-        @Query("cycle") cycle: String
+        @Query("cycle") cycle: String,
+        @Query("sort_hide_null") sortHideNull: Boolean = false,
+        @Query("sort_nulls_last") sortNullsLast: Boolean = false,
+        @Query("per_page") perPage: Int = 20
     ): Response<FecEmployerContributionResponse>
 }
