@@ -70,7 +70,10 @@ class DetailsViewModel : ViewModel() {
 
             // Step 3: Process the now-completed results. Filter out any failed (null) cycles and convert to a map.
             val successfulData = results.mapNotNull { (cycle, contributions) ->
-                contributions?.let { cycle to it }
+                // Sort contributions by total amount descending
+                contributions?.let { 
+                    cycle to it.sortedByDescending { item -> item.total }
+                }
             }.toMap()
             Log.d(TAG, "fetchHistoricalData: Successful cycles: ${successfulData.keys}, total organizations: ${successfulData.values.sumOf { it.size }}")
 
@@ -87,4 +90,36 @@ class DetailsViewModel : ViewModel() {
             isLoading.value = false
         }
     }
+    // State for the currently selected year. "All" means no filter.
+    val selectedYear = mutableStateOf("All")
+
+    /**
+     * Updates the selected year filter.
+     */
+    fun selectYear(year: String) {
+        selectedYear.value = year
+    }
+
+    /**
+     * Returns the list of organizations filtered by the selected year.
+     * If "All" is selected, it effectively flattens the list (or we could show all cycles).
+     * For the "All" view in the list, we might want to just show everything or group them.
+     * Based on the requirement "list of years... act as a filter", 
+     * when a year is selected, we show that year's data. 
+     * When "All" is selected, we show all data (existing behavior).
+     */
+    val filteredOrganizations: List<FecEmployerContribution>
+        get() {
+            val allData = historicalOrganizations.value
+            return if (selectedYear.value == "All") {
+                // If "All", we might want to return everything, but the UI expects a list of contributions.
+                // The current UI iterates over the map. 
+                // To keep it simple for the UI, let's let the UI decide how to render "All" (map iteration)
+                // vs "Single Year" (list iteration).
+                // Or better, let's expose the map, and if a year is selected, this map only contains that year.
+                emptyList() // Not used when "All" is active, refer to historicalOrganizations
+            } else {
+                allData[selectedYear.value] ?: emptyList()
+            }
+        }
 }

@@ -27,13 +27,15 @@ import androidx.compose.material3.Surface
 
 
 @Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 fun DetailsScreen(navController: NavController, cid: String?, viewModel: DetailsViewModel = viewModel()) {
-    // Observe the historicalOrganizations state from the ViewModel
+    // Observe state
     val historicalOrganizations by remember { viewModel.historicalOrganizations }
     val isLoading by remember { viewModel.isLoading }
     val errorMessage by remember { viewModel.errorMessage }
+    val selectedYear by remember { viewModel.selectedYear }
 
-    // Fetch data when the screen is first composed or when the CID changes
+    // Fetch data
     LaunchedEffect(cid) {
         cid?.let { viewModel.fetchHistoricalData(it) }
     }
@@ -51,70 +53,118 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     style = MaterialTheme.typography.bodyLarge
                 )
             } else {
-                // Create data for the chart by summing totals for each cycle
+                // Chart Data (always show all years for comparison)
                 val chartData = remember(historicalOrganizations) {
                     historicalOrganizations.mapValues { (_, organizations) ->
-                        // CORRECTED: Use the new FecEmployerContribution model
                         organizations.sumOf { it.total }.toFloat()
-                    }.filter { it.value > 0f } // Filter out cycles with no data
+                    }.filter { it.value > 0f }
+                }
+
+                // Header & Filter Chips
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    // "All" Chip
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedYear == "All",
+                        onClick = { viewModel.selectYear("All") },
+                        label = { Text("All Years") }
+                    )
+                    // Dynamic Chips for available years, sorted
+                    historicalOrganizations.keys.sortedDescending().forEach { year ->
+                        androidx.compose.material3.FilterChip(
+                            selected = selectedYear == year,
+                            onClick = { viewModel.selectYear(year) },
+                            label = { Text(year) }
+                        )
+                    }
                 }
 
                 if (chartData.isNotEmpty()) {
-                    Text(
-                        text = "Total Contributions by Cycle",
-                        style = MaterialTheme.typography.headlineMedium,
+                     Text(
+                        text = "Contribution History",
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    // Ensure BarChart handles colors or wrap it properly. 
-                    // Assuming BarChart uses simple canvas drawing.
-                    BarChart(data = chartData)
-                    Spacer(modifier = Modifier.height(24.dp))
+                    BarChart(
+                        data = chartData,
+                        valueFormatter = { value ->
+                            // Compact format for chart: $1.2M, $500K, etc. could be better, but basic currency for now
+                             NumberFormat.getCurrencyInstance().apply {
+                                 maximumFractionDigits = 0
+                             }.format(value)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Display the detailed list below the chart
+                // List of Contributors
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    historicalOrganizations.forEach { (cycle, organizations) ->
-                        item {
-                            Text(
-                                text = "Top Contributors ($cycle)",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.secondary, // Gold accent for headers
-                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                            )
-                        }
-                        items(organizations) { organization ->
-                            val formattedTotal = remember(organization.total) {
-                                NumberFormat.getCurrencyInstance().format(organization.total)
-                            }
-                            androidx.compose.material3.Card(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                colors = androidx.compose.material3.CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
+                    if (selectedYear == "All") {
+                        // Show all sections
+                        historicalOrganizations.forEach { (cycle, organizations) ->
+                             item {
+                                Text(
+                                    text = "Top Contributors ($cycle)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                                 )
-                            ) {
-                                androidx.compose.foundation.layout.Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = organization.employer,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        text = formattedTotal,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                            }
+                            items(organizations) { organization ->
+                                ContributorItem(organization)
+                            }
+                        }
+                    } else {
+                        // Show only selected year
+                        val organizations = viewModel.filteredOrganizations
+                        if (organizations.isNotEmpty()) {
+                            // Header removed as per user request when filtering by specific year
+                            items(organizations) { organization ->
+                                ContributorItem(organization)
+                            }
+                        } else {
+                            item {
+                                Text("No data for this year.", modifier = Modifier.padding(16.dp))
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ContributorItem(organization: io.github.paulleung93.lobbylens.data.model.FecEmployerContribution) {
+    val formattedTotal = remember(organization.total) {
+        NumberFormat.getCurrencyInstance().format(organization.total)
+    }
+    androidx.compose.material3.Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant // slightly distinct background
+        )
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = organization.employer,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = formattedTotal,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface, // Improved contrast
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
