@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,10 +38,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
@@ -94,55 +97,59 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
         }
     )
 
-    // The entire screen is a Box to allow for alignment of elements
-    // at the top and bottom of the screen.
+    // Background Gradient with Presidential Theme
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.background,
+            MaterialTheme.colorScheme.surface
+        )
+    )
+
     Surface(
-        color = MaterialTheme.colorScheme.background,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
+        color = Color.Transparent // Use Box background
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .background(backgroundBrush)
+                .padding(24.dp)
         ) {
-            // Main content area, aligned to the top center.
+            // Main content area
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Spacer(modifier = Modifier.height(64.dp))
-
-                // App Logo and Title
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_logo),
-                        contentDescription = "LobbyLens Logo",
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "LobbyLens",
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
+                // App Logo and Title - Centered visually by stacking
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_logo),
+                    contentDescription = "LobbyLens Logo",
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.secondary // Gold Accent
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "LOBBYLENS",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    letterSpacing = 2.sp
+                )
+                
                 Text(
                     text = "Transparency in your pocket.",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                     modifier = Modifier.padding(top = 8.dp)
                 )
 
-                // Spacer to push buttons down.
-                Spacer(modifier = Modifier.height(120.dp))
+                Spacer(modifier = Modifier.height(64.dp))
 
-                // "Take Photo" button, styled as the primary action.
+                // "Take Photo" button
                 Button(
                     onClick = {
                         if (hasCameraPermission) {
@@ -156,74 +163,81 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(4.dp), // Sharper corners for official look
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = "Take Photo"
+                        contentDescription = "Take Photo",
+                        tint = MaterialTheme.colorScheme.secondary
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "Scan Politician",
-                        style = MaterialTheme.typography.titleLarge
+                        "SCAN CANDIDATE",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // "Select from Gallery" button, styled as the secondary action.
+                // "Select from Gallery" button
                 Button(
                     onClick = { galleryLauncher.launch("image/*") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(4.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Collections,
-                        contentDescription = "Select from Gallery"
+                        contentDescription = "Select from Gallery",
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "Upload Photo",
+                        "UPLOAD PHOTO",
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
             }
 
-            // A fake search bar at the bottom of the screen.
+            // A fake search bar at the bottom
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .padding(bottom = 16.dp)
                     .clickable { navController.navigate("editor") },
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(50), // Pill shape
                 color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
-                shadowElevation = 8.dp
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
+                shadowElevation = 4.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search Icon",
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Or search manually...",
+                        text = "Search database manually...",
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         style = MaterialTheme.typography.bodyLarge
                     )
