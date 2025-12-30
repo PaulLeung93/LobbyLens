@@ -35,6 +35,7 @@ class DetailsViewModel : ViewModel() {
     val isSenateLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
     val senateErrorMessage = mutableStateOf<String?>(null)
+    val candidateName = mutableStateOf<String?>(null)
     
     private val _selectedView = mutableStateOf(DetailsViewType.LOBBYIST)
     val selectedView: State<DetailsViewType> = _selectedView
@@ -148,6 +149,7 @@ class DetailsViewModel : ViewModel() {
             when (val candidateResult = repository.getCandidateDetails(cid)) {
                 is Result.Success -> {
                     val name = candidateResult.data.results.firstOrNull()?.name
+                    candidateName.value = name
                     if (name != null) {
                         fetchSenateData(name)
                     }

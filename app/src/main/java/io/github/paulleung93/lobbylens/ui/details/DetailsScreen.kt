@@ -27,6 +27,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.OpenInNew
 
 
 @Composable
@@ -198,11 +202,21 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     }
                 } else {
                     // --- LOBBYIST VIEW ---
-                    val flattenedContributions = remember(senateContributions) {
+                    val flattenedContributions = remember(senateContributions, viewModel.candidateName.value) {
+                        val name = viewModel.candidateName.value
+                        val lastName = name?.split(",")?.firstOrNull()?.trim()?.lowercase() ?: ""
+                        
                         senateContributions.flatMap { report ->
                             report.contributionItems?.map { contribution ->
                                 report to contribution
                             } ?: emptyList()
+                        }.filter { (_, contribution) ->
+                            // Filter logic: The honoree name should contain the last name of our candidate
+                            // or the candidate name should contain the honoree name's parts.
+                            // This prevents showing other people from the same report.
+                            val honoree = contribution.honoreeName.lowercase()
+                            if (lastName.isEmpty()) true 
+                            else honoree.contains(lastName)
                         }.sortedByDescending { it.second.date }
                     }
 
@@ -301,7 +315,6 @@ fun LobbyistContributionCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            
             Spacer(modifier = Modifier.height(4.dp))
             
             androidx.compose.foundation.layout.Row(
@@ -325,6 +338,33 @@ fun LobbyistContributionCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val context = androidx.compose.ui.platform.LocalContext.current
+            androidx.compose.material3.OutlinedButton(
+                onClick = {
+                    val url = "https://lda.senate.gov/filings/public/contribution/${report.filingUuid}/print/"
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+            ) {
+                androidx.compose.foundation.layout.Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Verify with Official Senate Report", style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
     }
