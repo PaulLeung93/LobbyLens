@@ -53,11 +53,26 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     style = MaterialTheme.typography.bodyLarge
                 )
             } else {
-                // Chart Data (always show all years for comparison)
-                val chartData = remember(historicalOrganizations) {
-                    historicalOrganizations.mapValues { (_, organizations) ->
-                        organizations.sumOf { it.total }.toFloat()
-                    }.filter { it.value > 0f }
+                // Chart Data (Top 5 Contributors)
+                val chartData = remember(historicalOrganizations, selectedYear) {
+                    if (selectedYear == "All") {
+                        // Aggregate all years to find top contributors of all time
+                        historicalOrganizations.values.flatten()
+                            .groupBy { it.employer }
+                            .mapValues { (_, contributions) ->
+                                contributions.sumOf { it.total }.toFloat()
+                            }
+                            .toList()
+                            .sortedByDescending { it.second }
+                            .take(5)
+                    } else {
+                        // Top contributors for the selected year
+                        historicalOrganizations[selectedYear] // This list is already sorted by VM, but sort again to be safe/explicit or if logic changes
+                            ?.sortedByDescending { it.total }
+                            ?.take(5)
+                            ?.map { it.employer to it.total.toFloat() }
+                            ?: emptyList()
+                    }
                 }
 
                 // Header & Filter Chips
@@ -84,7 +99,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
 
                 if (chartData.isNotEmpty()) {
                      Text(
-                        text = "Contribution History",
+                        text = if (selectedYear == "All") "Top Contributors (All Time)" else "Top Contributors ($selectedYear)",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -92,7 +107,6 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     BarChart(
                         data = chartData,
                         valueFormatter = { value ->
-                            // Compact format for chart: $1.2M, $500K, etc. could be better, but basic currency for now
                              NumberFormat.getCurrencyInstance().apply {
                                  maximumFractionDigits = 0
                              }.format(value)

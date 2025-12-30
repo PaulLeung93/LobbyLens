@@ -19,24 +19,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import java.util.SortedMap
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 
 /**
  * A simple bar chart composable to visualize data.
  *
- * @param data A map of labels to values to be represented as bars.
+ * @param data A list of pairs (Label -> Value) to be represented as bars. Order is preserved.
  */
 @Composable
 fun BarChart(
-    data: Map<String, Float>,
+    data: List<Pair<String, Float>>,
     valueFormatter: (Float) -> String = { "%.0f".format(it) }
 ) {
-    val maxValue = data.values.maxOrNull() ?: 0f
+    // If no data, just return
+    if (data.isEmpty()) return
+
+    val maxValue = data.maxOfOrNull { it.second } ?: 0f
     val barColor = MaterialTheme.colorScheme.secondary
     val labelColor = MaterialTheme.colorScheme.onSurface
     val valueLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-
-    val sortedData = data.toSortedMap()
 
     Column(
         modifier = Modifier
@@ -51,29 +53,33 @@ fun BarChart(
             verticalAlignment = Alignment.Bottom, 
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
         ) {
-            sortedData.forEach { (label, value) ->
+            data.forEach { (label, value) ->
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     val heightFraction = if (maxValue > 0) value / maxValue else 0f
                     
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         // Value Label
                         Text(
                             text = valueFormatter(value),
                             style = MaterialTheme.typography.labelSmall,
                             color = valueLabelColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                         // Bar
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(0.6f)
+                                .fillMaxWidth(0.8f) // Make bars slightly thinner
                                 .fillMaxHeight(heightFraction)
                                 .background(
                                     color = barColor,
@@ -100,11 +106,18 @@ fun BarChart(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
         ) {
-            sortedData.forEach { (label, _) ->
+            data.forEach { (label, _) ->
+                // Truncate long labels
+                val displayLabel = if (label.length > 10) label.take(8) + ".." else label
+                
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = labelColor
+                    text = displayLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = labelColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Visible, // Allow some overflow if needed, or Clip
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
