@@ -5,6 +5,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,6 +36,7 @@ fun EditorScreen(
     imageUri: String?,
     viewModel: EditorViewModel = viewModel()
 ) {
+    Log.d("EditorScreen", "EditorScreen: Composing with imageUri=$imageUri")
     val context = LocalContext.current
     var text by remember { mutableStateOf("") }
     val candidates by remember { viewModel.candidates }
@@ -65,6 +67,7 @@ fun EditorScreen(
         if (imageUri != null) {
         // Effect 1: Load image and Identify
         LaunchedEffect(imageUri) {
+             Log.d("EditorScreen", "LaunchedEffect: Loading and identifying image from URI")
              processingState = "Loading image..."
              val decodedUri = URLDecoder.decode(imageUri, StandardCharsets.UTF_8.toString())
              val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -73,14 +76,17 @@ fun EditorScreen(
                  MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(decodedUri))
              }.copy(Bitmap.Config.ARGB_8888, true)
              originalBitmap = bitmap
+             Log.d("EditorScreen", "LaunchedEffect: Image loaded, size: ${bitmap.width}x${bitmap.height}")
              
              // Trigger Identification
+             Log.d("EditorScreen", "LaunchedEffect: Triggering politician identification")
              viewModel.identifyPolitician(bitmap)
         }
 
         // Effect 2: Generate Image when organizations are found
         LaunchedEffect(topOrganizations) {
             if (topOrganizations.isNotEmpty() && originalBitmap != null && generatedImage == null) {
+                 Log.d("EditorScreen", "LaunchedEffect: Organizations found (${topOrganizations.size}), triggering image generation")
                  viewModel.generateImage(originalBitmap!!)
             }
         }
@@ -107,6 +113,7 @@ fun EditorScreen(
                 CycleSelector(
                     selectedCycle = selectedCycle,
                     onCycleSelected = { newCycle ->
+                        Log.d("EditorScreen", "CycleSelector: User selected cycle $newCycle")
                         viewModel.fetchTopOrganizations(recognizedCid!!, newCycle)
                     }
                 )
@@ -118,19 +125,24 @@ fun EditorScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Button(onClick = {
+                        Log.d("EditorScreen", "Button: Save image clicked")
                         displayBitmap?.let { bmp ->
                             ImageUtils.saveImageToGallery(context, bmp, "LobbyLens_Image")
                         }
                     }) { Text("Save") }
 
                     Button(onClick = {
+                        Log.d("EditorScreen", "Button: Share image clicked")
                         displayBitmap?.let { bmp ->
                             val authority = "${context.packageName}.provider"
                             ImageUtils.shareImage(context, bmp, authority)
                         }
                     }) { Text("Share") }
 
-                    Button(onClick = { navController.navigate("details/$recognizedCid") }) {
+                    Button(onClick = {
+                        Log.d("EditorScreen", "Button: View details clicked for cid=$recognizedCid")
+                        navController.navigate("details/$recognizedCid")
+                    }) {
                         Text("View Details")
                     }
                 }

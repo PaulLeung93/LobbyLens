@@ -49,4 +49,38 @@ object RetrofitInstance {
     val api: FecApiService by lazy {
         retrofit.create(FecApiService::class.java)
     }
+
+    /**
+     * Retrofit instance for Google Cloud Vision API.
+     */
+    private val cloudVisionRetrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://vision.googleapis.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    /**
+     * Lazily creates the implementation of the CloudVisionService interface.
+     */
+    val cloudVisionApi: io.github.paulleung93.lobbylens.data.network.CloudVisionService by lazy {
+        cloudVisionRetrofit.create(io.github.paulleung93.lobbylens.data.network.CloudVisionService::class.java)
+    }
+
+    /**
+     * Retrofit instance for Vertex AI API.
+     */
+    private val vertexAiRetrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://aiplatform.googleapis.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    /**
+     * Lazily creates the implementation of the VertexAiService interface.
+     */
+    val vertexAiApi: io.github.paulleung93.lobbylens.data.network.VertexAiService by lazy {
+        vertexAiRetrofit.create(io.github.paulleung93.lobbylens.data.network.VertexAiService::class.java)
+    }
 }
