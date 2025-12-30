@@ -8,10 +8,10 @@ val GoldAccent = Color(0xFFFFD700)
 val SoftWhite = Color(0xFFE0E1DD)
 val LightBlue = Color(0xFF778DA9)
 
-val PrimaryColor = NavyBlue
-val SecondaryColor = GoldAccent
+val PrimaryColor = GoldAccent
+val SecondaryColor = LightBlue
 val TertiaryColor = DeepSlate
 val BackgroundColor = NavyBlue
 val SurfaceColor = DeepSlate
-val OnPrimary = Color.White
-val OnSecondary = NavyBlue
+val OnPrimary = NavyBlue
+val OnSecondary = Color.White

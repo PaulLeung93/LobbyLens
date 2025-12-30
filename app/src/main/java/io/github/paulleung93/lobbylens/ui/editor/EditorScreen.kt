@@ -130,7 +130,7 @@ fun EditorScreen(
                 Text(
                     text = "ANALYZING CANDIDATE",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 1.sp
                 )
 
@@ -269,10 +269,10 @@ fun EditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        cursorColor = MaterialTheme.colorScheme.secondary
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary
                     ),
                     trailingIcon = {
                         IconButton(onClick = { viewModel.searchCandidatesByName(text) }) {
@@ -379,8 +379,8 @@ fun CycleSelector(selectedCycle: String, onCycleSelected: (String) -> Unit) {
         ) {
             cycles.forEach { cycle ->
                 val isSelected = cycle == selectedCycle
-                val containerColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.Transparent
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface.copy(alpha=0.7f)
+                val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha=0.7f)
                 
                 Button(
                     onClick = { onCycleSelected(cycle) },

@@ -32,10 +32,11 @@ class DetailsViewModel : ViewModel() {
     val historicalOrganizations = mutableStateOf<Map<String, List<FecEmployerContribution>>>(emptyMap())
     val senateContributions = mutableStateOf<List<io.github.paulleung93.lobbylens.data.model.SenateContributionReport>>(emptyList())
     val isLoading = mutableStateOf(false)
+    val isSenateLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
     val senateErrorMessage = mutableStateOf<String?>(null)
     
-    private val _selectedView = mutableStateOf(DetailsViewType.CAMPAIGN)
+    private val _selectedView = mutableStateOf(DetailsViewType.LOBBYIST)
     val selectedView: State<DetailsViewType> = _selectedView
 
     fun updateViewType(viewType: DetailsViewType) {
@@ -50,6 +51,7 @@ class DetailsViewModel : ViewModel() {
 
         viewModelScope.launch {
             isLoading.value = true
+            isSenateLoading.value = true
             errorMessage.value = null
             senateErrorMessage.value = null
             historicalOrganizations.value = emptyMap()
@@ -161,6 +163,7 @@ class DetailsViewModel : ViewModel() {
      */
     private suspend fun fetchSenateData(name: String) {
         Log.d(TAG, "fetchSenateData: Fetching for $name")
+        isSenateLoading.value = true
         senateErrorMessage.value = null
         when (val result = repository.getSenateContributions(name)) {
             is Result.Success -> {
@@ -173,6 +176,7 @@ class DetailsViewModel : ViewModel() {
             }
             else -> {}
         }
+        isSenateLoading.value = false
     }
     // State for the currently selected year. "All" means no filter.
     val selectedYear = mutableStateOf("All")

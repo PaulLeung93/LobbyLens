@@ -18,7 +18,13 @@ private val DarkColorScheme = darkColorScheme(
     background = BackgroundColor,
     surface = SurfaceColor,
     onPrimary = OnPrimary,
-    onSecondary = OnSecondary
+    onSecondary = OnSecondary,
+    onBackground = SoftWhite,
+    onSurface = SoftWhite,
+    primaryContainer = GoldAccent.copy(alpha = 0.1f),
+    onPrimaryContainer = GoldAccent,
+    secondaryContainer = DeepSlate,
+    onSecondaryContainer = SoftWhite
 )
 
 private val LightColorScheme = DarkColorScheme // Enforce Dark Mode for now

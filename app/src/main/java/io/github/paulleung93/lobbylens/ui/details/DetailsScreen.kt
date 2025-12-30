@@ -36,6 +36,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
     val historicalOrganizations by remember { viewModel.historicalOrganizations }
     val senateContributions by remember { viewModel.senateContributions }
     val isLoading by remember { viewModel.isLoading }
+    val isSenateLoading by remember { viewModel.isSenateLoading }
     val errorMessage by remember { viewModel.errorMessage }
     val selectedYear by remember { viewModel.selectedYear }
 
@@ -59,34 +60,37 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
             } else {
                 // View Selector
                 androidx.compose.material3.TabRow(
-                    selectedTabIndex = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) 0 else 1,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    selectedTabIndex = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) 0 else 1,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 16.dp),
                     indicator = { tabPositions ->
                         androidx.compose.material3.TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(tabPositions[if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) 0 else 1]),
-                            color = MaterialTheme.colorScheme.primary
+                            Modifier.tabIndicatorOffset(tabPositions[if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) 0 else 1]),
+                            color = MaterialTheme.colorScheme.primary,
+                            height = 3.dp
                         )
                     }
                 ) {
-                    androidx.compose.material3.Tab(
-                        selected = viewModel.selectedView.value == DetailsViewType.CAMPAIGN,
-                        onClick = { viewModel.updateViewType(DetailsViewType.CAMPAIGN) },
-                        text = { 
-                            Text(
-                                "Campaign Contributions",
-                                fontWeight = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) FontWeight.Bold else FontWeight.Normal
-                            ) 
-                        }
-                    )
                     androidx.compose.material3.Tab(
                         selected = viewModel.selectedView.value == DetailsViewType.LOBBYIST,
                         onClick = { viewModel.updateViewType(DetailsViewType.LOBBYIST) },
                         text = { 
                             Text(
                                 "Lobbyist Disclosures",
-                                fontWeight = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) FontWeight.Bold else FontWeight.Normal,
+                                color = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            ) 
+                        }
+                    )
+                    androidx.compose.material3.Tab(
+                        selected = viewModel.selectedView.value == DetailsViewType.CAMPAIGN,
+                        onClick = { viewModel.updateViewType(DetailsViewType.CAMPAIGN) },
+                        text = { 
+                            Text(
+                                "Campaign Contributions",
+                                fontWeight = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) FontWeight.Bold else FontWeight.Normal,
+                                color = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             ) 
                         }
                     )
@@ -127,13 +131,21 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                         androidx.compose.material3.FilterChip(
                             selected = selectedYear == "All",
                             onClick = { viewModel.selectYear("All") },
-                            label = { Text("All Years") }
+                            label = { Text("All Years") },
+                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
                         )
                         historicalOrganizations.keys.sortedDescending().forEach { year ->
                             androidx.compose.material3.FilterChip(
                                 selected = selectedYear == year,
                                 onClick = { viewModel.selectYear(year) },
-                                label = { Text(year) }
+                                label = { Text(year) },
+                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
                             )
                         }
                     }
@@ -210,7 +222,18 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                             )
                         }
                         
-                        if (viewModel.senateErrorMessage.value != null) {
+                        if (isSenateLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = androidx.compose.ui.Alignment.Center
+                                ) {
+                                    androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        } else if (viewModel.senateErrorMessage.value != null) {
                             item {
                                 Text(
                                     text = viewModel.senateErrorMessage.value!!,
