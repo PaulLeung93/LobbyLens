@@ -16,6 +16,14 @@ enum class DetailsViewType {
     CAMPAIGN, LOBBYIST
 }
 
+enum class LobbyistSortOption {
+    DATE_DESC, DATE_ASC, AMOUNT_DESC, AMOUNT_ASC
+}
+
+enum class CampaignSortOption {
+    AMOUNT_DESC, AMOUNT_ASC
+}
+
 /**
  * ViewModel for the Details screen.
  * It is responsible for fetching top contributor data for a specific politician across multiple cycles,
@@ -36,6 +44,7 @@ class DetailsViewModel : ViewModel() {
     val errorMessage = mutableStateOf<String?>(null)
     val senateErrorMessage = mutableStateOf<String?>(null)
     val candidateName = mutableStateOf<String?>(null)
+    val principalCommitteeId = mutableStateOf<String?>(null)
     
     private val _selectedView = mutableStateOf(DetailsViewType.LOBBYIST)
     val selectedView: State<DetailsViewType> = _selectedView
@@ -74,6 +83,7 @@ class DetailsViewModel : ViewModel() {
 
                     if (principalCommittee != null) {
                         committeeId = principalCommittee.committeeId
+                        principalCommitteeId.value = committeeId
                     } else {
                         Log.w(TAG, "fetchHistoricalData: No principal committee (designation='P') found for candidate $cid")
                         // Fallback: Try to find any committee if P is missing, or strictly require P.
@@ -190,6 +200,38 @@ class DetailsViewModel : ViewModel() {
         selectedYear.value = year
     }
 
+    val campaignSort = mutableStateOf(CampaignSortOption.AMOUNT_DESC)
+
+    fun updateCampaignSort(option: CampaignSortOption) {
+        campaignSort.value = option
+    }
+
+
+
+    val campaignSearchQuery = mutableStateOf("")
+
+    fun updateCampaignSearchQuery(query: String) {
+        campaignSearchQuery.value = query
+    }
+
+    // --- Lobbyist Filters ---
+    val lobbyistSelectedYear = mutableStateOf("All")
+
+    fun selectLobbyistYear(year: String) {
+        lobbyistSelectedYear.value = year
+    }
+
+    val lobbyistSort = mutableStateOf(LobbyistSortOption.DATE_DESC)
+    val lobbyistSearchQuery = mutableStateOf("")
+
+    fun updateLobbyistSort(option: LobbyistSortOption) {
+        lobbyistSort.value = option
+    }
+
+    fun updateLobbyistSearchQuery(query: String) {
+        lobbyistSearchQuery.value = query
+    }
+
     /**
      * Returns the list of organizations filtered by the selected year.
      * If "All" is selected, it effectively flattens the list (or we could show all cycles).
@@ -201,15 +243,28 @@ class DetailsViewModel : ViewModel() {
     val filteredOrganizations: List<FecEmployerContribution>
         get() {
             val allData = historicalOrganizations.value
-            return if (selectedYear.value == "All") {
-                // If "All", we might want to return everything, but the UI expects a list of contributions.
-                // The current UI iterates over the map. 
-                // To keep it simple for the UI, let's let the UI decide how to render "All" (map iteration)
-                // vs "Single Year" (list iteration).
-                // Or better, let's expose the map, and if a year is selected, this map only contains that year.
-                emptyList() // Not used when "All" is active, refer to historicalOrganizations
+            val data = if (selectedYear.value == "All") {
+                 // Return empty list effectively disables logic for "All" in the current UI implementation which handles "All" manually.
+                 // However, we want to support sorting even in "All" view if we change UI.
+                 // But current UI iterates map for "All".
+                 // Let's keep it simple: filteredOrganizations is ONLY for single year selection for now.
+                 emptyList()
             } else {
                 allData[selectedYear.value] ?: emptyList()
+            }
+
+            // Apply Search
+            var filtered = data
+            if (campaignSearchQuery.value.isNotEmpty()) {
+                val query = campaignSearchQuery.value.lowercase()
+                filtered = filtered.filter { 
+                    it.employer.lowercase().contains(query)
+                }
+            }
+
+            return when (campaignSort.value) {
+                CampaignSortOption.AMOUNT_DESC -> filtered.sortedByDescending { it.total }
+                CampaignSortOption.AMOUNT_ASC -> filtered.sortedBy { it.total }
             }
         }
 }

@@ -118,5 +118,53 @@ data class FecEmployerContribution(
     val total: Double,
 
     @SerializedName("count")
+    val count: Int,
+
+    // Not from API, but populated manually by repository to differentiate source type.
+    // "Employer" or "PAC"
+    var type: String = "Employer"
+)
+
+/**
+ * Represents the top-level response from the FEC's /schedules/schedule_a/ endpoint.
+ */
+data class FecScheduleAResponse(
+    @SerializedName("results")
+    val results: List<FecScheduleA>
+)
+
+data class FecScheduleA(
+    @SerializedName("contributor_name")
+    val contributorName: String,
+
+    @SerializedName("contribution_receipt_amount")
+    val amount: Double,
+    
+    @SerializedName("entity_type")
+    val entityType: String?
+)
+
+/**
+ * Represents the top-level response from the FEC's /schedules/schedule_a/by_contributor endpoint.
+ */
+data class FecContributorResponse(
+    @SerializedName("results")
+    val results: List<FecContributor>
+)
+
+/**
+ * Represents aggregated contributions by a specific contributor (Individual or Committee).
+ */
+data class FecContributor(
+    @SerializedName("contributor_name")
+    val contributorName: String,
+
+    @SerializedName("contributor_id")
+    val contributorId: String?,
+
+    @SerializedName("total")
+    val total: Double,
+
+    @SerializedName("count")
     val count: Int
 )

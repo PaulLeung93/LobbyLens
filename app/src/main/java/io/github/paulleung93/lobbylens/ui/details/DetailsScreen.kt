@@ -13,6 +13,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
+import io.github.paulleung93.lobbylens.ui.details.CampaignSortOption
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -31,6 +34,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Check
 
 
 @Composable
@@ -43,11 +49,18 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
     val isSenateLoading by remember { viewModel.isSenateLoading }
     val errorMessage by remember { viewModel.errorMessage }
     val selectedYear by remember { viewModel.selectedYear }
+    val lobbyistSelectedYear by remember { viewModel.lobbyistSelectedYear }
+    val lobbyistSort by remember { viewModel.lobbyistSort }
+    val lobbyistSearchQuery by remember { viewModel.lobbyistSearchQuery }
 
     // Fetch data
     LaunchedEffect(cid) {
         cid?.let { viewModel.fetchHistoricalData(it) }
     }
+    
+    val principalCommitteeId by remember { viewModel.principalCommitteeId }
+    val campaignSort by remember { viewModel.campaignSort }
+    val campaignSearchQuery by remember { viewModel.campaignSearchQuery }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -107,7 +120,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     val chartData = remember(historicalOrganizations, selectedYear) {
                         if (selectedYear == "All") {
                             historicalOrganizations.values.flatten()
-                                .groupBy { it.employer }
+                                .groupBy { contribution: io.github.paulleung93.lobbylens.data.model.FecEmployerContribution -> contribution.employer }
                                 .mapValues { (_, contributions) ->
                                     contributions.sumOf { it.total }.toFloat()
                                 }
@@ -124,32 +137,73 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     }
 
                     // Header & Filter Chips
-                    androidx.compose.foundation.layout.Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp)
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    androidx.compose.foundation.layout.Column(
+                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                     ) {
-                        androidx.compose.material3.FilterChip(
-                            selected = selectedYear == "All",
-                            onClick = { viewModel.selectYear("All") },
-                            label = { Text("All Years") },
-                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                            )
+                        // Search Bar
+                        androidx.compose.material3.OutlinedTextField(
+                            value = campaignSearchQuery,
+                            onValueChange = { viewModel.updateCampaignSearchQuery(it) },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            placeholder = { Text("Search by contributor...") },
+                            singleLine = true,
+                            leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search") },
+                            trailingIcon = if (campaignSearchQuery.isNotEmpty()) {
+                                {
+                                    androidx.compose.material3.IconButton(onClick = { viewModel.updateCampaignSearchQuery("") }) {
+                                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            } else null
                         )
-                        historicalOrganizations.keys.sortedDescending().forEach { year ->
+
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
                             androidx.compose.material3.FilterChip(
-                                selected = selectedYear == year,
-                                onClick = { viewModel.selectYear(year) },
-                                label = { Text(year) },
+                                selected = selectedYear == "All",
+                                onClick = { viewModel.selectYear("All") },
+                                label = { Text("All Years") },
                                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                 )
+                            )
+                            historicalOrganizations.keys.sortedDescending().forEach { year ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = selectedYear == year,
+                                    onClick = { viewModel.selectYear(year) },
+                                    label = { Text(year) },
+                                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Sort Options (Campaign)
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                    ) {
+                            val sortOptions = listOf(
+                            "$ Highest" to CampaignSortOption.AMOUNT_DESC,
+                            "$ Lowest" to CampaignSortOption.AMOUNT_ASC
+                        )
+                        sortOptions.forEach { (label, option) ->
+                            androidx.compose.material3.FilterChip(
+                                selected = campaignSort == option,
+                                onClick = { viewModel.updateCampaignSort(option) },
+                                label = { Text(label) },
+                                leadingIcon = if (campaignSort == option) {
+                                    { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null
                             )
                         }
                     }
@@ -175,23 +229,39 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if (selectedYear == "All") {
                             historicalOrganizations.forEach { (cycle, organizations) ->
-                                item {
-                                    Text(
-                                        text = "Top Contributors ($cycle)",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                                    )
+                                    // In "All" view, we need to handle search query manually here or rely on ViewModel returning a flattened list for "All" (which I noted in ViewModel comments but didn't implement fully for "All").
+                                    // Current ViewModel.filteredOrganizations handles search for "Single Year".
+                                    // For "All" year, the UI iterates the map. Let's filter here for consistency if needed.
+                                    
+                                    val filteredOrgs = if (campaignSearchQuery.isNotEmpty()) {
+                                        organizations.filter { it.employer.lowercase().contains(campaignSearchQuery.lowercase()) }
+                                    } else {
+                                        organizations
+                                    }
+
+                                    if (filteredOrgs.isNotEmpty()) {
+                                        item {
+                                            Text(
+                                                text = "Top Contributors ($cycle)",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                                            )
+                                        }
+                                        val sortedOrgs = when (campaignSort) {
+                                            CampaignSortOption.AMOUNT_DESC -> filteredOrgs.sortedByDescending { it.total }
+                                            CampaignSortOption.AMOUNT_ASC -> filteredOrgs.sortedBy { it.total }
+                                        }
+                                        items(sortedOrgs) { organization ->
+                                            ContributorItem(organization, principalCommitteeId, cycle)
+                                        }
+                                    }
                                 }
-                                items(organizations) { organization ->
-                                    ContributorItem(organization)
-                                }
-                            }
                         } else {
                             val organizations = viewModel.filteredOrganizations
                             if (organizations.isNotEmpty()) {
                                 items(organizations) { organization ->
-                                    ContributorItem(organization)
+                                    ContributorItem(organization, principalCommitteeId, selectedYear)
                                 }
                             } else {
                                 item {
@@ -202,7 +272,8 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                     }
                 } else {
                     // --- LOBBYIST VIEW ---
-                    val flattenedContributions = remember(senateContributions, viewModel.candidateName.value) {
+                    // --- LOBBYIST VIEW ---
+                    val baseLobbyistContributions = remember(senateContributions, viewModel.candidateName.value) {
                         val name = viewModel.candidateName.value
                         val lastName = name?.split(",")?.firstOrNull()?.trim()?.lowercase() ?: ""
                         
@@ -211,13 +282,151 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                                 report to contribution
                             } ?: emptyList()
                         }.filter { (_, contribution) ->
-                            // Filter logic: The honoree name should contain the last name of our candidate
-                            // or the candidate name should contain the honoree name's parts.
-                            // This prevents showing other people from the same report.
                             val honoree = contribution.honoreeName.lowercase()
                             if (lastName.isEmpty()) true 
                             else honoree.contains(lastName)
                         }.sortedByDescending { it.second.date }
+                    }
+
+                    // Lobbyist Filter Logic
+                    val lobbyistUniqueYears = remember(baseLobbyistContributions) {
+                        baseLobbyistContributions.map { it.first.filingYear.toString() }.distinct().sortedDescending()
+                    }
+
+                    val filteredLobbyistContributions = remember(baseLobbyistContributions, lobbyistSelectedYear, lobbyistSort, lobbyistSearchQuery) {
+                        var filtered = if (lobbyistSelectedYear == "All") {
+                            baseLobbyistContributions
+                        } else {
+                            baseLobbyistContributions.filter { it.first.filingYear.toString() == lobbyistSelectedYear }
+                        }
+
+                        // Apply Search
+                        if (lobbyistSearchQuery.isNotEmpty()) {
+                            val query = lobbyistSearchQuery.lowercase()
+                            filtered = filtered.filter { (report, contribution) ->
+                                report.registrant.name.lowercase().contains(query) ||
+                                contribution.payeeName.lowercase().contains(query) ||
+                                contribution.contributorName.lowercase().contains(query)
+                            }
+                        }
+
+                        // Apply Sort
+                        when (lobbyistSort) {
+                            LobbyistSortOption.DATE_DESC -> filtered.sortedByDescending { it.second.date }
+                            LobbyistSortOption.DATE_ASC -> filtered.sortedBy { it.second.date }
+                            LobbyistSortOption.AMOUNT_DESC -> filtered.sortedByDescending { 
+                                try { it.second.amount.toDouble() } catch (e: Exception) { 0.0 } 
+                            }
+                            LobbyistSortOption.AMOUNT_ASC -> filtered.sortedBy { 
+                                try { it.second.amount.toDouble() } catch (e: Exception) { 0.0 } 
+                            }
+                        }
+                    }
+
+                    // Lobbyist Chart Data (Top Registrants)
+                    val lobbyistChartData = remember(filteredLobbyistContributions) {
+                         filteredLobbyistContributions
+                            .groupBy { it.first.registrant.name }
+                            .mapValues { (_, items) ->
+                                items.sumOf { 
+                                    try { it.second.amount.toDouble() } catch (e: Exception) { 0.0 }
+                                }.toFloat()
+                            }
+                            .toList()
+                            .sortedByDescending { it.second }
+                            .take(5)
+                    }
+
+                    // Search, Sort & Filters Header
+                    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                        // Search Bar
+                        androidx.compose.material3.OutlinedTextField(
+                            value = lobbyistSearchQuery,
+                            onValueChange = { viewModel.updateLobbyistSearchQuery(it) },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            placeholder = { Text("Search by donor, firm or payee...") },
+                            singleLine = true,
+                            leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search") },
+                            trailingIcon = if (lobbyistSearchQuery.isNotEmpty()) {
+                                {
+                                    androidx.compose.material3.IconButton(onClick = { viewModel.updateLobbyistSearchQuery("") }) {
+                                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            } else null
+                        )
+
+                        // Sort Options
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                        ) {
+                             val sortOptions = listOf(
+                                "Newest" to LobbyistSortOption.DATE_DESC,
+                                "Oldest" to LobbyistSortOption.DATE_ASC,
+                                "$ Highest" to LobbyistSortOption.AMOUNT_DESC,
+                                "$ Lowest" to LobbyistSortOption.AMOUNT_ASC
+                            )
+                            sortOptions.forEach { (label, option) ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = lobbyistSort == option,
+                                    onClick = { viewModel.updateLobbyistSort(option) },
+                                    label = { Text(label) },
+                                    leadingIcon = if (lobbyistSort == option) {
+                                        { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    } else null
+                                )
+                            }
+                        }
+                        
+                         // Year Filters
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.FilterChip(
+                                selected = lobbyistSelectedYear == "All",
+                                onClick = { viewModel.selectLobbyistYear("All") },
+                                label = { Text("All Years") },
+                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                            lobbyistUniqueYears.forEach { year ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = lobbyistSelectedYear == year,
+                                    onClick = { viewModel.selectLobbyistYear(year) },
+                                    label = { Text(year) },
+                                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    if (lobbyistChartData.isNotEmpty()) {
+                        Text(
+                            text = if (lobbyistSelectedYear == "All") "Top Startups/Firms (All Time)" else "Top Startups/Firms ($lobbyistSelectedYear)",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        BarChart(
+                            data = lobbyistChartData,
+                            valueFormatter = { value ->
+                                NumberFormat.getCurrencyInstance().apply {
+                                    maximumFractionDigits = 0
+                                }.format(value)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -256,7 +465,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
                             }
-                        } else if (flattenedContributions.isEmpty()) {
+                        } else if (filteredLobbyistContributions.isEmpty()) {
                             item {
                                 Text(
                                     text = "No lobbyist disclosures found for this politician.",
@@ -266,7 +475,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                                 )
                             }
                         } else {
-                            items(flattenedContributions) { (report, contribution) ->
+                            items(filteredLobbyistContributions) { (report, contribution) ->
                                 LobbyistContributionCard(report, contribution)
                             }
                         }
@@ -371,10 +580,26 @@ fun LobbyistContributionCard(
 }
 
 @Composable
-fun ContributorItem(organization: io.github.paulleung93.lobbylens.data.model.FecEmployerContribution) {
+fun ContributorItem(
+    organization: io.github.paulleung93.lobbylens.data.model.FecEmployerContribution,
+    committeeId: String?,
+    cycle: String
+) {
     val formattedTotal = remember(organization.total) {
         NumberFormat.getCurrencyInstance().format(organization.total)
     }
+    
+    val typeLabel = if (organization.type.equals("PAC", ignoreCase = true)) {
+        "PAC"
+    } else {
+        "Employer"
+    }
+    val typeColor = if (organization.type.equals("PAC", ignoreCase = true)) {
+        MaterialTheme.colorScheme.tertiary
+    } else {
+        MaterialTheme.colorScheme.secondary
+    }
+
     androidx.compose.material3.Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = androidx.compose.material3.CardDefaults.cardColors(
@@ -383,20 +608,69 @@ fun ContributorItem(organization: io.github.paulleung93.lobbylens.data.model.Fec
     ) {
         androidx.compose.foundation.layout.Row(
             modifier = Modifier.padding(16.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
-            Text(
-                text = organization.employer,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = organization.employer,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text(
+                        text = typeLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = typeColor,
+                        modifier = Modifier
+                            .background(
+                                color = typeColor.copy(alpha = 0.1f),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
             Text(
                 text = formattedTotal,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface, // Improved contrast
                 fontWeight = FontWeight.Bold
             )
+        }
+        
+        // Verification Link
+        if (committeeId != null) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    val encodedName = android.net.Uri.encode(organization.employer)
+                    val url = "https://www.fec.gov/data/receipts/?committee_id=$committeeId&contributor_name=$encodedName&two_year_transaction_period=$cycle"
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 0.dp)
+            ) {
+                 androidx.compose.foundation.layout.Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Verify Source", 
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                     Spacer(modifier = Modifier.width(4.dp))
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }

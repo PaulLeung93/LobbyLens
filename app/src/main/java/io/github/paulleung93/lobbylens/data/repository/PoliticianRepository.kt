@@ -7,6 +7,8 @@ import io.github.paulleung93.lobbylens.data.api.RetrofitInstance
 import io.github.paulleung93.lobbylens.data.model.FecCandidateResponse
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContributionResponse
 import io.github.paulleung93.lobbylens.util.Result
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 /**
  * Repository for fetching politician data from the official FEC (Federal Election Commission) API.
@@ -120,6 +122,10 @@ class PoliticianRepository {
     /**
      * Fetches top contributing organizations (by employer) for a given committee (principal campaign committee) and cycle.
      */
+    /**
+     * Fetches top contributing organizations (by employer) AND top committee/PAC contributors for a given committee and cycle.
+     * Merges the results into a single list of FecEmployerContribution.
+     */
     suspend fun getTopOrganizations(committeeId: String, cycle: String): Result<FecEmployerContributionResponse> {
         Log.d(TAG, "getTopOrganizations: Fetching for committeeId=$committeeId, cycle=$cycle")
         val cacheKey = "$committeeId-$cycle"
@@ -129,16 +135,57 @@ class PoliticianRepository {
         }
 
         return try {
-            val response = apiService.getTopOrganizationsByEmployer(committeeId = committeeId, cycle = cycle)
-            Log.d(TAG, "getTopOrganizations: Response code: ${response.code()}")
-            if (response.isSuccessful && response.body() != null) {
-                val result = Result.Success(response.body()!!)
-                Log.d(TAG, "getTopOrganizations: Found ${result.data.results.size} organizations")
-                organizationsCache[cacheKey] = result
-                result
-            } else {
-                Log.e(TAG, "getTopOrganizations: API Error: ${response.message()}")
-                Result.Error(Exception("API Error: ${response.message()}"))
+            // Launch parallel requests using kotlinx.coroutines.async if within a coroutine scope,
+            // but here we are suspend, so we can just call them sequentially or use coroutineScope { async ... }
+            // For simplicity and safety without adding more dependencies right now, we'll do sequential.
+            // Ideally use coroutineScope { awaitAll(...) } for parallelism.
+
+            kotlinx.coroutines.coroutineScope {
+                val employerDeferred = async {
+                    apiService.getTopOrganizationsByEmployer(committeeId = committeeId, cycle = cycle)
+                }
+                val contributorDeferred = async {
+                    apiService.getPacContributions(committeeId = committeeId, cycle = cycle)
+                }
+
+                val employerResponse = employerDeferred.await()
+                val contributorResponse = contributorDeferred.await()
+
+                val employers = if (employerResponse.isSuccessful && employerResponse.body() != null) {
+                    employerResponse.body()!!.results.map {
+                        it.apply { type = "Employer" }
+                    }
+                } else {
+                    Log.e(TAG, "getTopOrganizations: Employer API Error: ${employerResponse.message()}")
+                    emptyList<io.github.paulleung93.lobbylens.data.model.FecEmployerContribution>()
+                }
+
+                val contributors = if (contributorResponse.isSuccessful && contributorResponse.body() != null) {
+                    val rawList = contributorResponse.body()!!.results
+                    // Manually aggregate by contributor name
+                    rawList.groupBy { it.contributorName }
+                        .map { (name, items) ->
+                            io.github.paulleung93.lobbylens.data.model.FecEmployerContribution(
+                                employer = name,
+                                total = items.sumOf { it.amount },
+                                count = items.size,
+                                type = "PAC"
+                            )
+                        }
+                } else {
+                    Log.e(TAG, "getTopOrganizations: Contributor API Error: ${contributorResponse.message()}")
+                    emptyList<io.github.paulleung93.lobbylens.data.model.FecEmployerContribution>()
+                }
+
+                val mergedList = (employers + contributors).sortedByDescending { it.total }
+                
+                if (mergedList.isNotEmpty()) {
+                    val result = Result.Success(FecEmployerContributionResponse(mergedList))
+                    organizationsCache[cacheKey] = result
+                    result
+                } else {
+                    Result.Error(Exception("Failed to fetch contribution data"))
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "getTopOrganizations: Exception occurred", e)

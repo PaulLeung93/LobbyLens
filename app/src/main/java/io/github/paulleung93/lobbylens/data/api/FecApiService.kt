@@ -70,4 +70,14 @@ interface FecApiService {
         @Query("sort_nulls_last") sortNullsLast: Boolean = false,
         @Query("per_page") perPage: Int = 20
     ): Response<FecEmployerContributionResponse>
+
+    @GET("schedules/schedule_a/")
+    suspend fun getPacContributions(
+        @Query("api_key") apiKey: String = BuildConfig.FEC_API_KEY,
+        @Query("committee_id") committeeId: String,
+        @Query("cycle") cycle: String,
+        @Query("is_individual") isIndividual: Boolean = false,
+        @Query("sort") sort: String = "-contribution_receipt_amount",
+        @Query("per_page") perPage: Int = 50
+    ): Response<io.github.paulleung93.lobbylens.data.model.FecScheduleAResponse>
 }
