@@ -10,6 +10,11 @@ import io.github.paulleung93.lobbylens.util.Result
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.State
+
+enum class DetailsViewType {
+    CAMPAIGN, LOBBYIST
+}
 
 /**
  * ViewModel for the Details screen.
@@ -25,8 +30,17 @@ class DetailsViewModel : ViewModel() {
     }
 
     val historicalOrganizations = mutableStateOf<Map<String, List<FecEmployerContribution>>>(emptyMap())
+    val senateContributions = mutableStateOf<List<io.github.paulleung93.lobbylens.data.model.SenateContributionReport>>(emptyList())
     val isLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
+    val senateErrorMessage = mutableStateOf<String?>(null)
+    
+    private val _selectedView = mutableStateOf(DetailsViewType.CAMPAIGN)
+    val selectedView: State<DetailsViewType> = _selectedView
+
+    fun updateViewType(viewType: DetailsViewType) {
+        _selectedView.value = viewType
+    }
 
     /**
      * Fetches historical data concurrently and handles partial failures gracefully.
@@ -37,7 +51,9 @@ class DetailsViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             errorMessage.value = null
+            senateErrorMessage.value = null
             historicalOrganizations.value = emptyMap()
+            senateContributions.value = emptyList()
 
             // Step 1: Fetch Candidate Committee History to get a valid Principal Committee ID
             var committeeId: String? = null
@@ -124,6 +140,38 @@ class DetailsViewModel : ViewModel() {
             }
 
             isLoading.value = false
+            
+            // Step 3: Fetch Senate Data (LD-203)
+            // We need the candidate's name for this. Let's fetch it if we don't have it.
+            when (val candidateResult = repository.getCandidateDetails(cid)) {
+                is Result.Success -> {
+                    val name = candidateResult.data.results.firstOrNull()?.name
+                    if (name != null) {
+                        fetchSenateData(name)
+                    }
+                }
+                is Result.Error -> Log.e(TAG, "fetchHistoricalData: Failed to get candidate name for Senate search")
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Fetches lobbyist contributions from the Senate API.
+     */
+    private suspend fun fetchSenateData(name: String) {
+        Log.d(TAG, "fetchSenateData: Fetching for $name")
+        senateErrorMessage.value = null
+        when (val result = repository.getSenateContributions(name)) {
+            is Result.Success -> {
+                Log.d(TAG, "fetchSenateData: Success, found ${result.data.results.size} reports")
+                senateContributions.value = result.data.results
+            }
+            is Result.Error -> {
+                Log.e(TAG, "fetchSenateData: Error: ${result.exception.message}")
+                senateErrorMessage.value = "Failed to load lobbyist disclosures: ${result.exception.message}"
+            }
+            else -> {}
         }
     }
     // State for the currently selected year. "All" means no filter.

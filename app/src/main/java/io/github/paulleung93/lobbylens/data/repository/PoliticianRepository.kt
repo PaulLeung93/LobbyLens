@@ -205,6 +205,50 @@ class PoliticianRepository {
     }
 
     /**
+     * Fetches lobbyist contributions (LD-203 reports) from the U.S. Senate Lobbying Disclosure API.
+     * Searches by honoree name (the politician).
+     */
+    suspend fun getSenateContributions(politicianName: String): Result<io.github.paulleung93.lobbylens.data.model.SenateContributionResponse> {
+        val normalizedName = normalizeNameForSenate(politicianName)
+        Log.d(TAG, "getSenateContributions: Fetching for normalizedName=$normalizedName (original=$politicianName)")
+        
+        return try {
+            val response = RetrofitInstance.senateLdaApi.getContributions(honoreeName = normalizedName)
+            Log.d(TAG, "getSenateContributions: Response code: ${response.code()}")
+            if (response.isSuccessful && response.body() != null) {
+                Result.Success(response.body()!!)
+            } else {
+                Log.e(TAG, "getSenateContributions: API Error: ${response.code()} ${response.message()}")
+                Result.Error(Exception("Senate API Error ${response.code()}: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getSenateContributions: Exception occurred", e)
+            Result.Error(e)
+        }
+    }
+
+    /**
+     * Normalizes a name from FEC format (LAST, FIRST MIDDLE) to a looser "FIRST LAST" format
+     * that works better for the Senate honoree search.
+     */
+    private fun normalizeNameForSenate(name: String): String {
+        return try {
+            val parts = name.split(",").map { it.trim() }
+            if (parts.size >= 2) {
+                val last = parts[0]
+                // Take only the first word of the second part (the first name)
+                // FEC names are often "FIRST MIDDLE SUFFIX"
+                val first = parts[1].split(Regex("\\s+"))[0]
+                "$first $last".trim()
+            } else {
+                name.trim() // Fallback to original
+            }
+        } catch (e: Exception) {
+            name.trim()
+        }
+    }
+
+    /**
      * Generates a new image with logos using Vertex AI (Imagen).
      */
     suspend fun generatePoliticianImage(baseBitmap: Bitmap, logos: List<String>): Result<Bitmap> {

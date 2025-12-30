@@ -83,4 +83,21 @@ object RetrofitInstance {
     val vertexAiApi: io.github.paulleung93.lobbylens.data.network.VertexAiService by lazy {
         vertexAiRetrofit.create(io.github.paulleung93.lobbylens.data.network.VertexAiService::class.java)
     }
+
+    /**
+     * Retrofit instance for Senate Lobbying Disclosure API.
+     */
+    private val senateLdaRetrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://lda.senate.gov/api/v1/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    /**
+     * Lazily creates the implementation of the SenateLdaApiService interface.
+     */
+    val senateLdaApi: SenateLdaApiService by lazy {
+        senateLdaRetrofit.create(SenateLdaApiService::class.java)
+    }
 }
