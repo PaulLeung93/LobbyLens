@@ -50,12 +50,38 @@ object RetrofitInstance {
         retrofit.create(FecApiService::class.java)
     }
 
+    private var packageName: String? = null
+    private var signatureDigest: String? = null
+
+    /**
+     * Initializes the RetrofitInstance with the application context for API key restrictions.
+     */
+    fun init(context: android.content.Context) {
+        packageName = context.packageName
+        signatureDigest = io.github.paulleung93.lobbylens.util.SignatureUtils.getSignature(context)
+        android.util.Log.d("RetrofitInstance", "Initialized with package: $packageName, signature: $signatureDigest")
+    }
+
+    fun getHeaderInfo(): String = "pkg=$packageName, sig=${signatureDigest?.take(10)}..."
+
+    private fun getCloudClient(): OkHttpClient {
+        return OkHttpClient.Builder().addInterceptor { chain ->
+            val original = chain.request()
+            val builder = original.newBuilder()
+            android.util.Log.d("RetrofitInstance", "Interceptor: Package=$packageName, Signature=$signatureDigest")
+            packageName?.let { builder.addHeader("X-Android-Package", it) }
+            signatureDigest?.let { builder.addHeader("X-Android-Cert", it) }
+            chain.proceed(builder.build())
+        }.build()
+    }
+
     /**
      * Retrofit instance for Google Cloud Vision API.
      */
     private val cloudVisionRetrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://vision.googleapis.com/")
+            .client(getCloudClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -68,11 +94,30 @@ object RetrofitInstance {
     }
 
     /**
+     * Creates a client with extended timeout for image generation APIs.
+     */
+    private fun getLongTimeoutClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val builder = original.newBuilder()
+                packageName?.let { builder.addHeader("X-Android-Package", it) }
+                signatureDigest?.let { builder.addHeader("X-Android-Cert", it) }
+                chain.proceed(builder.build())
+            }
+            .build()
+    }
+
+    /**
      * Retrofit instance for Vertex AI API.
      */
     private val vertexAiRetrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://aiplatform.googleapis.com/")
+            .client(getLongTimeoutClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -99,5 +144,26 @@ object RetrofitInstance {
      */
     val senateLdaApi: SenateLdaApiService by lazy {
         senateLdaRetrofit.create(SenateLdaApiService::class.java)
+    }
+
+    /**
+     * Retrofit instance for Image Generation Cloud Function.
+     */
+    private val imageGenRetrofit by lazy {
+        val baseUrl = io.github.paulleung93.lobbylens.BuildConfig.CLOUD_FUNCTION_URL.let {
+            if (it.endsWith("/")) it else "$it/"
+        }
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(getLongTimeoutClient())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    /**
+     * Lazily creates the implementation of the ImageGenService interface.
+     */
+    val imageGenApi: io.github.paulleung93.lobbylens.data.network.ImageGenService by lazy {
+        imageGenRetrofit.create(io.github.paulleung93.lobbylens.data.network.ImageGenService::class.java)
     }
 }

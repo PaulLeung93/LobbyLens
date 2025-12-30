@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -48,6 +49,11 @@ android {
             "GOOGLE_CLOUD_LOCATION",
             "\"${localProperties.getProperty("GOOGLE_CLOUD_LOCATION") ?: "us-central1"}\""
         )
+        buildConfigField(
+            "String",
+            "CLOUD_FUNCTION_URL",
+            "\"${localProperties.getProperty("CLOUD_FUNCTION_URL") ?: ""}\""
+        )
     }
 
     buildTypes {
@@ -89,6 +95,13 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     implementation(libs.coil.compose)
+    
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.ai)
+    implementation(libs.firebase.appcheck)
+    debugImplementation(libs.firebase.appcheck.debug)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

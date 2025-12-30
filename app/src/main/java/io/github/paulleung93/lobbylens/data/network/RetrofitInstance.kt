@@ -49,23 +49,62 @@ object RetrofitInstance {
 
     private const val VISION_BASE_URL = "https://vision.googleapis.com/"
 
+    // Defaulting to us-central1 for now. 
+    // Ideally this should be dynamic based on BuildConfig.GOOGLE_CLOUD_LOCATION but Retrofit BaseURL is static.
+    private const val VERTEX_AI_BASE_URL = "https://us-central1-aiplatform.googleapis.com/"
+
+    private var appContext: android.content.Context? = null
+    private var packageName: String? = null
+    private var signatureDigest: String? = null
+
+    /**
+     * Initializes the RetrofitInstance with the application context.
+     * This is required to fetch the package name and signing certificate for API key restrictions.
+     */
+    fun init(context: android.content.Context) {
+        appContext = context.applicationContext
+        packageName = context.packageName
+        signatureDigest = io.github.paulleung93.lobbylens.util.SignatureUtils.getSignature(context)
+        android.util.Log.d("RetrofitInstance", "Initialized with package: $packageName, signature: $signatureDigest")
+    }
+
+    /**
+     * Returns debug info about the current header state.
+     */
+    fun getHeaderInfo(): String = "pkg=$packageName, sig=${signatureDigest?.take(10)}..."
+
+    private fun getCloudClient(): OkHttpClient {
+        return OkHttpClient.Builder().addInterceptor { chain ->
+            val original = chain.request()
+            val builder = original.newBuilder()
+            
+            // Add Android restriction headers if available
+            android.util.Log.d("RetrofitInstance", "Interceptor: Package=$packageName, Signature=$signatureDigest")
+
+            packageName?.let {
+                builder.addHeader("X-Android-Package", it)
+            }
+            signatureDigest?.let {
+                builder.addHeader("X-Android-Cert", it)
+            }
+
+            chain.proceed(builder.build())
+        }.build()
+    }
+
     val cloudVisionApi: CloudVisionService by lazy {
         Retrofit.Builder()
             .baseUrl(VISION_BASE_URL)
-            .client(OkHttpClient())
+            .client(getCloudClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(CloudVisionService::class.java)
     }
 
-    // Defaulting to us-central1 for now. 
-    // Ideally this should be dynamic based on BuildConfig.GOOGLE_CLOUD_LOCATION but Retrofit BaseURL is static.
-    private const val VERTEX_AI_BASE_URL = "https://us-central1-aiplatform.googleapis.com/"
-
     val vertexAiApi: VertexAiService by lazy {
         Retrofit.Builder()
             .baseUrl(VERTEX_AI_BASE_URL)
-            .client(OkHttpClient())
+            .client(getCloudClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(VertexAiService::class.java)

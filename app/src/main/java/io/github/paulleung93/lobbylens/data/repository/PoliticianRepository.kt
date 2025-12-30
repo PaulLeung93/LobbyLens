@@ -2,6 +2,7 @@ package io.github.paulleung93.lobbylens.data.repository
 
 import android.graphics.Bitmap
 import android.util.Log
+import com.google.firebase.ai.ai
 import io.github.paulleung93.lobbylens.data.api.FecApiService
 import io.github.paulleung93.lobbylens.data.api.RetrofitInstance
 import io.github.paulleung93.lobbylens.data.model.FecCandidateResponse
@@ -271,6 +272,7 @@ class PoliticianRepository {
 
             // Make the Cloud Vision API call
             Log.d(TAG, "identifyPolitician: Calling Cloud Vision API")
+            Log.d(TAG, "identifyPolitician: RetrofitInstance headers - Package: ${RetrofitInstance.getHeaderInfo()}")
             val response = RetrofitInstance.cloudVisionApi.annotateImage(io.github.paulleung93.lobbylens.BuildConfig.GOOGLE_API_KEY, request)
             Log.d(TAG, "identifyPolitician: Cloud Vision response code: ${response.code()}")
             
@@ -355,57 +357,29 @@ class PoliticianRepository {
     }
 
     /**
-     * Generates a new image with logos using Vertex AI (Imagen).
+     * Generates a new image with logos using Firebase AI Imagen.
      */
     suspend fun generatePoliticianImage(baseBitmap: Bitmap, logos: List<String>): Result<Bitmap> {
         Log.d(TAG, "generatePoliticianImage: Starting image generation with logos: $logos")
         return try {
-            val base64Image = io.github.paulleung93.lobbylens.util.ImageUtils.bitmapToBase64(baseBitmap)
             val prompt = "A photo of a politician wearing a suit with ${logos.joinToString(", ")} logo pins on the lapel. Photorealistic, high quality."
             Log.d(TAG, "generatePoliticianImage: Prompt: $prompt")
+
+            // Initialize Firebase Imagen model
+            val firebaseAI = com.google.firebase.Firebase.ai(backend = com.google.firebase.ai.type.GenerativeBackend.vertexAI())
+            val imagenModel = firebaseAI.imagenModel("imagen-3.0-generate-002")
+
+            Log.d(TAG, "generatePoliticianImage: Calling Firebase Imagen API")
+            val imageResponse = imagenModel.generateImages(prompt)
             
-            val request = io.github.paulleung93.lobbylens.data.model.VertexAiPredictionRequest(
-                instances = listOf(
-                    io.github.paulleung93.lobbylens.data.model.VertexAiInstance(
-                        prompt = prompt,
-                        image = io.github.paulleung93.lobbylens.data.model.VertexAiImage(base64Image)
-                    )
-                ),
-                parameters = io.github.paulleung93.lobbylens.data.model.VertexAiParameters(sampleCount = 1)
-            )
-
-            val projectId = io.github.paulleung93.lobbylens.BuildConfig.GOOGLE_CLOUD_PROJECT_ID
-            val location = io.github.paulleung93.lobbylens.BuildConfig.GOOGLE_CLOUD_LOCATION
-            val apiKey = io.github.paulleung93.lobbylens.BuildConfig.GOOGLE_API_KEY
-            // Using "image-generation-001" or "imagen-3.0-generate-001". Using a stable model ID.
-            val modelId = "imagegeneration@005" // Example model ID, user might need to adjust.
-            Log.d(TAG, "generatePoliticianImage: Using projectId=$projectId, location=$location, modelId=$modelId")
-
-            Log.d(TAG, "generatePoliticianImage: Calling Vertex AI API")
-            val response = RetrofitInstance.vertexAiApi.predict(
-                projectId = projectId,
-                location = location,
-                modelId = modelId,
-                apiKey = apiKey,
-                request = request
-            )
-            Log.d(TAG, "generatePoliticianImage: Vertex AI response code: ${response.code()}")
-
-            if (response.isSuccessful && response.body() != null) {
-                val prediction = response.body()!!.predictions?.firstOrNull()
-                Log.d(TAG, "generatePoliticianImage: Received ${response.body()!!.predictions?.size ?: 0} predictions")
-                if (prediction != null) {
-                    val decodedBytes = android.util.Base64.decode(prediction, android.util.Base64.DEFAULT)
-                    val generatedBitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
-                    Log.i(TAG, "generatePoliticianImage: Successfully generated image")
-                    Result.Success(generatedBitmap)
-                } else {
-                    Log.e(TAG, "generatePoliticianImage: No image in prediction")
-                    Result.Error(Exception("No image generated."))
-                }
+            val image = imageResponse.images.firstOrNull()
+            if (image != null) {
+                val generatedBitmap = image.asBitmap()
+                Log.i(TAG, "generatePoliticianImage: Successfully generated image")
+                Result.Success(generatedBitmap)
             } else {
-                Log.e(TAG, "generatePoliticianImage: Vertex AI API Error: ${response.message()}, code: ${response.code()}, body: ${response.errorBody()?.string()}")
-                 Result.Error(Exception("Vertex AI API Error: ${response.message()} code ${response.code()}"))
+                Log.e(TAG, "generatePoliticianImage: No image generated")
+                Result.Error(Exception("No image generated."))
             }
         } catch (e: Exception) {
             Log.e(TAG, "generatePoliticianImage: Exception occurred", e)

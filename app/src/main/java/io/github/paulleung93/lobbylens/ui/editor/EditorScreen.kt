@@ -131,7 +131,8 @@ fun EditorScreen(
                     text = "ANALYZING CANDIDATE",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.sp,
+                    textAlign = TextAlign.Center
                 )
 
                 // Processing Status
