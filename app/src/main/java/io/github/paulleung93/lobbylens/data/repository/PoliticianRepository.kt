@@ -57,6 +57,65 @@ class PoliticianRepository {
     }
 
     /**
+     * Fetches current members of congress (Incumbents) for a specific cycle.
+     * Fetches all pages to ensure the list is complete.
+     */
+    suspend fun getCongressMembers(cycle: String = "2024"): Result<FecCandidateResponse> {
+        Log.d(TAG, "getCongressMembers: Fetching incumbents for cycle $cycle")
+        
+        val allCandidates = mutableListOf<io.github.paulleung93.lobbylens.data.model.FecCandidate>()
+        var page = 1
+        var hasMorePages = true
+        // Safety limit to prevent infinite loops if API behaves unexpectedly
+        val maxPages = 20 
+
+        return try {
+            while (hasMorePages && page <= maxPages) {
+                Log.d(TAG, "getCongressMembers: Fetching page $page")
+                val response = apiService.getCandidates(
+                    cycle = cycle, 
+                    incumbentChallenge = "I",
+                    sort = "name",
+                    perPage = 100, // Maximize per page
+                    page = page
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    val batch = response.body()!!.results
+                    if (batch.isEmpty()) {
+                        hasMorePages = false
+                    } else {
+                        allCandidates.addAll(batch)
+                        // If we got fewer than requested, we are at the end
+                        if (batch.size < 100) {
+                            hasMorePages = false
+                        } else {
+                            page++
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "getCongressMembers: API Error on page $page: ${response.message()}")
+                    // If we have some data, return what we have? Or fail?
+                    // Let's return error to be safe, or break and show partial.
+                    // Returning error is safer for now.
+                    return Result.Error(Exception("API Error on page $page: ${response.message()}"))
+                }
+            }
+            
+            Log.d(TAG, "getCongressMembers: Finished fetching. Total found: ${allCandidates.size}")
+            // Wrap in a dummy response object since we expect FecCandidateResponse
+            val combinedResponse = FecCandidateResponse(
+                results = allCandidates
+            )
+            Result.Success(combinedResponse)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "getCongressMembers: Exception occurred", e)
+            Result.Error(e)
+        }
+    }
+
+    /**
      * Fetches detailed information for a candidate, including principal committees.
      */
     /**

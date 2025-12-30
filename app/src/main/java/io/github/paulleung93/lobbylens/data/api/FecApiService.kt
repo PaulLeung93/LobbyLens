@@ -26,6 +26,20 @@ interface FecApiService {
     ): Response<FecCandidateResponse>
 
     /**
+     * Lists candidates. Useful for browsing.
+     */
+    @GET("candidates")
+    suspend fun getCandidates(
+        @Query("api_key") apiKey: String = BuildConfig.FEC_API_KEY,
+        @Query("cycle") cycle: String,
+        @Query("incumbent_challenge") incumbentChallenge: String? = null,
+        @Query("office") office: String? = null,
+        @Query("sort") sort: String = "name",
+        @Query("per_page") perPage: Int = 20,
+        @Query("page") page: Int = 1
+    ): Response<FecCandidateResponse>
+
+    /**
      * Fetches campaign contributions for a given candidate, aggregated by employer.
      * This serves as the source for "top organizations" data.
      *

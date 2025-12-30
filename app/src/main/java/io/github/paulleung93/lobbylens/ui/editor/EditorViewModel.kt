@@ -36,6 +36,33 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     val selectedCycle = mutableStateOf("2024") // Default to the most recent cycle
 
     /**
+     * Loads current members of congress (incumbents) into the candidates list.
+     */
+    fun loadCongressMembers() {
+        Log.d(TAG, "loadCongressMembers: Loading incumbents...")
+        viewModelScope.launch {
+            isLoading.value = true
+            errorMessage.value = null
+            candidates.value = emptyList()
+
+            // Default to 2024 or current cycle
+            when (val result = repository.getCongressMembers(selectedCycle.value)) {
+                is Result.Success -> {
+                    Log.i(TAG, "loadCongressMembers: Success - found ${result.data.results.size} members")
+                    candidates.value = result.data.results
+                    // If we want to sort further we can, but API sort is usually fine.
+                }
+                is Result.Error -> {
+                    Log.e(TAG, "loadCongressMembers: Error - ${result.exception.message}", result.exception)
+                    errorMessage.value = "Failed to fetch members: ${result.exception.message}"
+                }
+                else -> { /* No-op */ }
+            }
+            isLoading.value = false
+        }
+    }
+
+    /**
      * Searches for candidates by name using the FEC repository.
      * @param name The name of the politician to search for.
      */

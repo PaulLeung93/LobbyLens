@@ -284,6 +284,20 @@ fun EditorScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Browse Button
+                Button(
+                    onClick = { viewModel.loadCongressMembers() },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("BROWSE CURRENT MEMBERS", style = MaterialTheme.typography.titleMedium)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Button(
                     onClick = { viewModel.searchCandidatesByName(text) },
                     modifier = Modifier
@@ -338,7 +352,7 @@ fun EditorScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "ID: ${candidate.candidateId}",
+                                        text = "${candidate.party ?: "N/A"} • ${candidate.state ?: "N/A"} • ID: ${candidate.candidateId}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                     )
