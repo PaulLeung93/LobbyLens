@@ -4,7 +4,7 @@
 
 ## Core Features
 1.  **Cloud-Powered Recognition:** Utilizes **Google Cloud Vision API** (Web Detection) to accurately identify public figures from images, replacing the need for unreliable on-device models.
-2.  **Generative Visualization:** Uses **Gemini 2.5 Flash Image** to naturally edit politician photos, adding "donor badges" (company logos) to their clothing based on their top contributors.
+2.  **Generative Visualization:** Uses **Gemini 3 Pro Image** to naturally edit politician photos, adding "donor badges" (company logos) to their clothing based on their top contributors.
 3.  **Campaign Finance Data:** Pulls official campaign contribution data from the **FEC API**, including historical trends across different election cycles.
 4.  **Lobbyist Disclosures (LD-203):** Integrates the **U.S. Senate Lobbying Disclosure API** to show "Lobbyist Gift & Contribution Reports," providing a deeper look at influence beyond standard campaign donations.
 5.  **Interactive Data Exploration:** 
@@ -35,7 +35,7 @@ The app features a cohesive **Premium Dark** theme designed to convey authority 
 *   **Architecture:** MVVM (Model-View-ViewModel) with Repository pattern.
 *   **Cloud AI / Services:**
     *   **Google Cloud Vision API:** For politician identification.
-    *   **Gemini 2.5 Flash Image:** For AI image editing (generative inpainting).
+    *   **Gemini 3 Pro Image:** For AI image editing (generative inpainting).
 *   **APIs:**
     *   **FEC (Federal Election Commission):** Official campaign finance records.
     *   **U.S. Senate LDA:** Official Lobbying Disclosure Act (LD-203) reports.
