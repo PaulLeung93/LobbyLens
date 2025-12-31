@@ -12,17 +12,8 @@ import retrofit2.http.Query
  */
 interface SenateLdaApiService {
 
-    /**
-     * Searches for contribution reports by honoree name (the politician).
-     *
-     * @param honoreeName The name of the politician (honoree).
-     * @param authorization Optional API key header: "Token <key>".
-     * @return A [SenateContributionResponse] containing the matching reports.
-     */
     @GET("contributions/")
     suspend fun getContributions(
-        @Query("contribution_honoree") honoreeName: String,
-        @Header("Authorization") authorization: String? = null,
-        @Header("User-Agent") userAgent: String = "LobbyLens/1.0 (https://github.com/paulleung93/lobbylens)"
+        @Query("contribution_honoree") honoreeName: String
     ): Response<SenateContributionResponse>
 }

@@ -54,6 +54,11 @@ android {
             "CLOUD_FUNCTION_URL",
             "\"${localProperties.getProperty("CLOUD_FUNCTION_URL") ?: ""}\""
         )
+        buildConfigField(
+            "String",
+            "SENATE_API_KEY",
+            "\"${localProperties.getProperty("SENATE_API_KEY") ?: ""}\""
+        )
     }
 
     buildTypes {

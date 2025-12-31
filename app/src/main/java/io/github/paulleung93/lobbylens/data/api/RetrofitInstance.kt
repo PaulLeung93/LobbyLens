@@ -133,11 +133,32 @@ object RetrofitInstance {
     }
 
     /**
+     * Creates a client for the Senate LDA API that adds the Authorization token header.
+     */
+    private fun getSenateClient(): OkHttpClient {
+        return OkHttpClient.Builder().addInterceptor { chain ->
+            val original = chain.request()
+            val builder = original.newBuilder()
+            
+            val apiKey = BuildConfig.SENATE_API_KEY
+            if (apiKey.isNotEmpty()) {
+                builder.addHeader("Authorization", "Token $apiKey")
+            }
+            
+            // The API requires a descriptive User-Agent
+            builder.header("User-Agent", "LobbyLens/1.0 (https://github.com/paulleung93/lobbylens)")
+            
+            chain.proceed(builder.build())
+        }.build()
+    }
+
+    /**
      * Retrofit instance for Senate Lobbying Disclosure API.
      */
     private val senateLdaRetrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://lda.senate.gov/api/v1/")
+            .client(getSenateClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

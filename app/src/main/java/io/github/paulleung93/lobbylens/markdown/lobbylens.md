@@ -1,74 +1,85 @@
 # Project Roadmap: LobbyLens
 
-**Vision:** To create a data-driven Android application that provides transparency in politics by visualizing campaign finance data directly onto images of politicians, leveraging powerful Cloud AI for recognition and generative visualization.
+**Vision:** To provide unprecedented transparency in politics by visualizing campaign finance and lobbying data directly onto images of politicians. LobbyLens leverages powerful Cloud AI for recognition and generative visualization to create an intuitive, data-driven experience.
 
 ## Core Features
-1.  **Cloud-Powered Recognition:** Utilizes **Google Cloud Vision API** to accurately identify public figures from images, replacing the need for on-device models.
-2.  **Generative Visualization:** Uses **Vertex AI (Imagen 3)** to seamlessly generate high-quality images of politicians wearing "donor badges" (company logos) on their clothing.
-3.  **Manual Politician Search:** A robust fallback option allowing users to search for any US politician by name.
-4.  **Historical Campaign Data:** Users can select different election cycles to see how a politician's funding sources have changed over time.
-5.  **Detailed Organization Breakdown:** A dedicated details screen provides a comprehensive view of the top contributing organizations, their total donation amounts, and a historical bar chart showing funding trends.
-6.  **Premium Dark UI:** A sleek, modern "Premium Dark" aesthetic with Navy Blue and Gold accents, enhancing readability and visual appeal.
-7.  **Save & Share:** Users can save the generative AI masterpieces to their gallery or share them directly to social media.
+1.  **Cloud-Powered Recognition:** Utilizes **Google Cloud Vision API** (Web Detection) to accurately identify public figures from images, replacing the need for unreliable on-device models.
+2.  **Generative Visualization:** Uses **Gemini 2.5 Flash Image** to naturally edit politician photos, adding "donor badges" (company logos) to their clothing based on their top contributors.
+3.  **Campaign Finance Data:** Pulls official campaign contribution data from the **FEC API**, including historical trends across different election cycles.
+4.  **Lobbyist Disclosures (LD-203):** Integrates the **U.S. Senate Lobbying Disclosure API** to show "Lobbyist Gift & Contribution Reports," providing a deeper look at influence beyond standard campaign donations.
+5.  **Interactive Data Exploration:** 
+    *   **Sorting & Filtering:** Sort contributions by amount or search for specific donors by name.
+    *   **Historical Trends:** Interactive bar charts visualize funding sources over time.
+    *   **Tabbed Interface:** Seamlessly toggle between FEC campaign data and Senate lobbyist reports.
+6.  **Premium Aesthetic:** A sleek, modern "Presidential" theme with Navy Blue, Gold, and Deep Crimson accents, utilizing glassmorphism and Material 3 components.
+7.  **Save & Share:** Users can save the AI-generated "enhanced" images to their gallery or share them to social media.
 
 ## UI/UX Design
-The app features a cohesive **Premium Dark** theme to convey authority and trust.
+The app features a cohesive **Premium Dark** theme designed to convey authority and transparency.
 
 1.  **Home Screen:**
-    *   Large "Scan Politician" and "Upload Photo" buttons with Gold/Navy styling.
-    *   Glassmorphism-style search area.
-    *   Modern typography and clean layout.
+    *   A bold, presidential-themed landing page with "Scan Politician" and "Browse Congress" entry points.
+    *   Dynamic background elements and modern typography (Outfit/Inter).
 2.  **Editor Screen:**
-    *   Handles the Cloud AI pipeline: Upload -> Identify (Cloud Vision) -> Fetch Data (FEC) -> Generate (Vertex AI).
-    *   Displays status messages ("Identifying...", "Generating...") to keep the user informed.
-    *   Shows the final generative image.
-    *   Allows cycle selection for historical data comparison.
+    *   Orchestrates the AI pipeline: Identify -> Fetch -> Generate.
+    *   Real-time status tracking for identification and generative editing.
+    *   Interactive controls for cycle selection and organization filtering.
 3.  **Details Screen:**
-    *   Interactive Bar Charts for historical data.
-    *   Card-based list layout for top donors.
-    *   Clean financial formatting.
+    *   **Tabbed Layout:** "FEC Contributions" vs "Lobbyist Disclosures."
+    *   **Data Visualization:** High-performance bar charts for historical cycles.
+    *   **Searchable Lists:** Filterable donor records with formatted currency and contribution types.
 
 ## Technical Stack
 *   **Language:** Kotlin
-*   **UI Framework:** Jetpack Compose
-*   **Architecture:** MVVM (Model-View-ViewModel)
-*   **Cloud AI:**
-    *   **Google Cloud Vision API:** For politician detection and identification (Web Detection).
-    *   **Vertex AI (Imagen 3):** For generative image creation (inpainting/editing).
-*   **Networking:** Retrofit2 for all API interactions.
-*   **API:**
-    *   **FEC (Federal Election Commission) API:** For official campaign finance data.
-*   **Image Loading:** Coil.
+*   **UI Framework:** Jetpack Compose (Material 3)
+*   **Architecture:** MVVM (Model-View-ViewModel) with Repository pattern.
+*   **Cloud AI / Services:**
+    *   **Google Cloud Vision API:** For politician identification.
+    *   **Gemini 2.5 Flash Image:** For AI image editing (generative inpainting).
+*   **APIs:**
+    *   **FEC (Federal Election Commission):** Official campaign finance records.
+    *   **U.S. Senate LDA:** Official Lobbying Disclosure Act (LD-203) reports.
+*   **Networking:** Retrofit2 + OkHttp (with custom interceptors for API keys and User-Agents).
+*   **Utilities:** Coil (Image loading), Gson (JSON parsing).
 
-## Project Architecture (MVVM)
-*   `MainActivity.kt`: Hosts the Jetpack Compose navigation.
+## Project Architecture
+*   `MainActivity.kt`: Hosts Jetpack Compose navigation and theme initialization.
 *   `data/`:
-    *   `model/`: Data classes for FEC, Cloud Vision, and Vertex AI responses.
-    *   `network/`: Retrofit services (`FecApiService`, `CloudVisionService`, `VertexAiService`) and `RetrofitInstance`.
-    *   `repository/PoliticianRepository.kt`: Single source of truth. Orchestrates Cloud Vision identification -> FEC data fetching -> Vertex AI generation.
+    *   `model/`: Unified models for FEC, Senate LDA, Cloud Vision, and Gemini.
+    *   `api/`: Retrofit service definitions (`FecApiService`, `SenateLdaApiService`, `GeminiApiService`, `CloudVisionService`).
+    *   `repository/PoliticianRepository.kt`: The central orchestrator for all data and AI operations.
 *   `ui/`:
-    *   `home/`: Redesigned landing screen.
-    *   `editor/`: Main screen for AI processing and visualization.
-    *   `details/`: Data visualization screen.
-    *   `theme/`: Contains `Color.kt` (Premium Palette), `Type.kt`, and `Theme.kt`.
-*   `util/`: Helpers for `ImageUtils` (Base64 encoding, saving/sharing).
+    *   `home/`: Landing screen and congress browsing.
+    *   `editor/`: Processing and AI visualization.
+    *   `details/`: Comprehensive data visualization and search.
+    *   `theme/`: Design system tokens (Colors, Typography, Shapes).
 
-### Project Setup & Prerequisites
+---
 
-**1. Obtain a U.S. Government FEC API Key:**
-*   Register at [https://api.data.gov/signup/](https://api.data.gov/signup/).
-*   Add to `local.properties`: `FEC_API_KEY="YOUR_API_KEY"`
+## Project Setup & Prerequisites
 
-**2. Google Cloud Setup:**
-*   Create a Google Cloud Project.
-*   Enable **Cloud Vision API** and **Vertex AI API**.
-*   Create an **API Key** in Credentials.
-*   Add the following to `local.properties`:
+**1. FEC API Key:**
+*   Register at [api.data.gov](https://api.data.gov/signup/).
+*   Add to `local.properties`: `FEC_API_KEY=YOUR_KEY`
+
+**2. Google Cloud API Key:**
+*   Enable **Cloud Vision API** and **Gemini API** in your Google Cloud Console.
+*   Add to `local.properties`: 
     ```properties
-    GOOGLE_API_KEY="YOUR_GOOGLE_CLOUD_API_KEY"
-    GOOGLE_CLOUD_PROJECT_ID="YOUR_PROJECT_ID"
-    GOOGLE_CLOUD_LOCATION="us-central1"
+    GOOGLE_API_KEY=YOUR_KEY
+    GOOGLE_CLOUD_PROJECT_ID=YOUR_PROJECT_ID
+    GOOGLE_CLOUD_LOCATION=us-central1
     ```
 
-**3. Android SDK:**
-*   Ensure `sdk.dir` or `ANDROID_HOME` is set in your environment or `local.properties` to build the app.
+**3. Firebase Setup:**
+*   Create a project on the [Firebase Console](https://console.firebase.google.com/).
+*   Add an Android App with package name `io.github.paulleung93.lobbylens`.
+*   Download `google-services.json` and place it in the `app/` directory.
+*   **App Check:** Enable **Firebase App Check** to secure your API calls.
+    *   For debug builds, the app is configured to use the `DebugAppCheckProviderFactory`.
+    *   Register your **SHA-256 fingerprint** in the Firebase settings to allow local debugging.
+
+**4. Senate LDA API (Optional):**
+*   The Senate API is open, but registered keys have higher rate limits (120 req/min).
+*   Register at [lda.senate.gov](https://lda.senate.gov/api/v1/accounts/register/).
+*   Add to `local.properties`: `SENATE_API_KEY=YOUR_TOKEN`
