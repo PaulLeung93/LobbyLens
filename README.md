@@ -300,12 +300,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 This app uses publicly available data from official government sources (FEC, Senate LDA). Data accuracy depends on these sources. LobbyLens is designed for educational and transparency purposes. Always verify information with official sources before making important decisions.
 
----
-
-<div align="center">
-
-**Made with ❤️ for transparency in democracy**
-
-⭐ Star this repo if you support political transparency!
-
-</div>
