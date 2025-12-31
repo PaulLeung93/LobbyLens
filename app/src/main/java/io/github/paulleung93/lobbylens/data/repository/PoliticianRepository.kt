@@ -2,7 +2,7 @@ package io.github.paulleung93.lobbylens.data.repository
 
 import android.graphics.Bitmap
 import android.util.Log
-import com.google.firebase.ai.ai
+import com.google.gson.Gson
 import io.github.paulleung93.lobbylens.data.api.FecApiService
 import io.github.paulleung93.lobbylens.data.api.RetrofitInstance
 import io.github.paulleung93.lobbylens.data.model.FecCandidateResponse
@@ -265,7 +265,10 @@ class PoliticianRepository {
                 requests = listOf(
                     io.github.paulleung93.lobbylens.data.model.AnnotateImageRequest(
                         image = io.github.paulleung93.lobbylens.data.model.ImageContent(base64Image),
-                        features = listOf(io.github.paulleung93.lobbylens.data.model.Feature("WEB_DETECTION"))
+                        features = listOf(
+                            io.github.paulleung93.lobbylens.data.model.Feature("WEB_DETECTION"),
+                            io.github.paulleung93.lobbylens.data.model.Feature("FACE_DETECTION", maxResults = 1)
+                        )
                     )
                 )
             )
@@ -277,10 +280,12 @@ class PoliticianRepository {
             Log.d(TAG, "identifyPolitician: Cloud Vision response code: ${response.code()}")
             
             if (response.isSuccessful && response.body() != null) {
-                val annotations = response.body()!!.responses?.firstOrNull()?.webDetection
+                val annotationResponse = response.body()!!.responses?.firstOrNull()
+                val webAnnotations = annotationResponse?.webDetection
+                val faceAnnotations = annotationResponse?.faceAnnotations
+
                 // Naive heuristic: Look for the first entity that looks like a person's name or has high score
-                // In reality, Cloud Vision returns specific entities. We'll try to find one that matches an FEC candidate.
-                val entities = annotations?.webEntities
+                val entities = webAnnotations?.webEntities
                 Log.d(TAG, "identifyPolitician: Found ${entities?.size ?: 0} web entities")
                 if (entities.isNullOrEmpty()) {
                     Log.w(TAG, "identifyPolitician: No entities detected")
@@ -294,8 +299,16 @@ class PoliticianRepository {
                         val searchResult = searchCandidatesByName(entity.description)
                         if (searchResult is Result.Success && searchResult.data.results.isNotEmpty()) {
                             // Match found!
-                            Log.i(TAG, "identifyPolitician: Match found: ${searchResult.data.results.first().name}")
-                            return Result.Success(searchResult.data.results.first())
+                            val candidate = searchResult.data.results.first()
+                            Log.i(TAG, "identifyPolitician: Match found: ${candidate.name}")
+                            
+                            // Attach face vertices if available
+                            if (!faceAnnotations.isNullOrEmpty()) {
+                                candidate.faceVertices = faceAnnotations[0].boundingPoly?.vertices
+                                Log.d(TAG, "identifyPolitician: Attached face vertices: ${candidate.faceVertices}")
+                            }
+                            
+                            return Result.Success(candidate)
                         }
                     }
                 }
@@ -357,33 +370,169 @@ class PoliticianRepository {
     }
 
     /**
-     * Generates a new image with logos using Firebase AI Imagen.
+     * Generates a new image using Gemini 2.5 Flash Image to edit the original photo,
+     * adding sponsor logos to the politician's clothing naturally via AI.
      */
-    suspend fun generatePoliticianImage(baseBitmap: Bitmap, logos: List<String>): Result<Bitmap> {
-        Log.d(TAG, "generatePoliticianImage: Starting image generation with logos: $logos")
+    suspend fun generatePoliticianImage(
+        baseBitmap: Bitmap, 
+        logos: List<String>
+    ): Result<Bitmap> {
+        Log.d(TAG, "generatePoliticianImage: Starting AI image editing with Gemini 2.5 Flash Image via REST API")
+        Log.d(TAG, "generatePoliticianImage: Organizations: ${logos.joinToString(", ")}")
         return try {
-            val prompt = "A photo of a politician wearing a suit with ${logos.joinToString(", ")} logo pins on the lapel. Photorealistic, high quality."
-            Log.d(TAG, "generatePoliticianImage: Prompt: $prompt")
-
-            // Initialize Firebase Imagen model
-            val firebaseAI = com.google.firebase.Firebase.ai(backend = com.google.firebase.ai.type.GenerativeBackend.vertexAI())
-            val imagenModel = firebaseAI.imagenModel("imagen-3.0-generate-002")
-
-            Log.d(TAG, "generatePoliticianImage: Calling Firebase Imagen API")
-            val imageResponse = imagenModel.generateImages(prompt)
+            val companyNames = logos.joinToString(", ")
             
-            val image = imageResponse.images.firstOrNull()
-            if (image != null) {
-                val generatedBitmap = image.asBitmap()
-                Log.i(TAG, "generatePoliticianImage: Successfully generated image")
-                Result.Success(generatedBitmap)
-            } else {
-                Log.e(TAG, "generatePoliticianImage: No image generated")
-                Result.Error(Exception("No image generated."))
+            // 1. Encode image to base64
+            val base64Image = bitmapToBase64(baseBitmap)
+            if (base64Image == null) {
+                Log.e(TAG, "generatePoliticianImage: Failed to encode base image")
+                return Result.Error(Exception("Failed to encode base image"))
             }
+            
+            // 2. Prepare Gemini Request
+            val parts = mutableListOf<io.github.paulleung93.lobbylens.data.model.GeminiPart>()
+            
+            // Add image part
+            parts.add(
+                io.github.paulleung93.lobbylens.data.model.GeminiPart(
+                    inlineData = io.github.paulleung93.lobbylens.data.model.GeminiInlineData(
+                        mimeType = "image/jpeg",
+                        data = base64Image
+                    )
+                )
+            )
+            
+            // Add editing prompt - Force image generation in prompt
+            val prompt = """
+                Edit the first image (the politician's photo) to add the company sponsor logos/patches for: $companyNames.
+                
+                Place the logos similarly to how sponsor patches appear on athletic uniforms - on the chest, lapel, or upper arm area.
+                Create realistic text-based logo patches or approximate logo designs for these organizations.
+                
+                Make the logo placement look natural, professional, and realistic.
+                Preserve the person's identity exactly - do not change their face, hair, or other features.
+                Only add the logos to their clothing.
+                
+                Return ONLY the edited image. Do not provide any textual explanation.
+            """.trimIndent()
+            
+            parts.add(
+                io.github.paulleung93.lobbylens.data.model.GeminiPart(text = prompt)
+            )
+            
+            // 3. Create request
+            val request = io.github.paulleung93.lobbylens.data.model.GeminiRequest(
+                contents = listOf(
+                    io.github.paulleung93.lobbylens.data.model.GeminiContent(parts = parts)
+                ),
+                generationConfig = io.github.paulleung93.lobbylens.data.model.GeminiGenerationConfig(
+                    // FORCE IMAGE ONLY MODALITY
+                    // This tells the model to ONLY return an image. If it refuses, it should produce a safety error or similar,
+                    // but it suppresses "Sure, here is the image..." text that might confuse the parser.
+                    responseModalities = listOf("IMAGE")
+                )
+            )
+            
+            // 5. Call Gemini API
+            Log.d(TAG, "generatePoliticianImage: Sending request to Gemini API...")
+            val response = io.github.paulleung93.lobbylens.data.network.RetrofitInstance.geminiApi.generateContent(
+                apiKey = io.github.paulleung93.lobbylens.BuildConfig.GOOGLE_API_KEY,
+                request = request
+            )
+            
+            if (!response.isSuccessful || response.body() == null) {
+                val errorBody = response.errorBody()?.string()
+                Log.e(TAG, "generatePoliticianImage: API error: ${response.code()} - $errorBody")
+                return Result.Error(Exception("Gemini API error: ${response.code()}"))
+            }
+            
+            val geminiResponse = response.body()!!
+            
+            if (geminiResponse.error != null) {
+                Log.e(TAG, "generatePoliticianImage: Gemini error: ${geminiResponse.error.message}")
+                return Result.Error(Exception("Gemini error: ${geminiResponse.error.message}"))
+            }
+            
+            // 6. Extract edited image from response
+            val candidate = geminiResponse.candidates?.firstOrNull()
+            if (candidate == null) {
+                Log.e(TAG, "generatePoliticianImage: No candidates in response")
+                return Result.Error(Exception("No image generated"))
+            }
+            
+            var editedImageBase64: String? = null
+            val textParts = mutableListOf<String>()
+            
+            for (part in candidate.content.parts) {
+                if (part.inlineData != null) {
+                    editedImageBase64 = part.inlineData.data
+                    break
+                }
+                if (part.text != null) {
+                    textParts.add(part.text)
+                }
+            }
+            
+            if (editedImageBase64 == null) {
+                Log.e(TAG, "generatePoliticianImage: No image data in response")
+                
+                // Construct a helpful error message if we got text back instead of an image
+                val message = if (textParts.isNotEmpty()) {
+                    val combinedText = textParts.joinToString("\n")
+                    Log.w(TAG, "generatePoliticianImage: Received text response instead: $combinedText")
+                    "Gemini Message: $combinedText" 
+                } else {
+                    "No edited image returned. FinishReason: ${candidate.finishReason ?: "Unknown"}"
+                }
+                
+                // Log finish reason
+                if (candidate.finishReason != null) {
+                    Log.w(TAG, "generatePoliticianImage: Finish Reason: ${candidate.finishReason}")
+                }
+
+                // Check for safety ratings
+                if (candidate.safetyRatings != null) {
+                    android.util.Log.w(TAG, "generatePoliticianImage: Safety ratings: ${candidate.safetyRatings}")
+                }
+                
+                return Result.Error(Exception(message))
+            }
+            
+            // 7. Decode base64 to Bitmap
+            val editedBitmap = base64ToBitmap(editedImageBase64)
+            if (editedBitmap == null) {
+                Log.e(TAG, "generatePoliticianImage: Failed to decode image")
+                return Result.Error(Exception("Failed to decode edited image"))
+            }
+            
+            Log.i(TAG, "generatePoliticianImage: Successfully created AI-edited image")
+            Result.Success(editedBitmap)
+
         } catch (e: Exception) {
             Log.e(TAG, "generatePoliticianImage: Exception occurred", e)
             Result.Error(e)
+        }
+    }
+    
+    /**
+     * Helper function to convert Bitmap to base64 string
+     */
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        val outputStream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        return android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP)
+    }
+    
+    /**
+     * Helper function to convert base64 string to Bitmap
+     */
+    private fun base64ToBitmap(base64: String): Bitmap? {
+        return try {
+            val decodedBytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+            android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+        } catch (e: Exception) {
+            Log.e(TAG, "base64ToBitmap: Failed to decode", e)
+            null
         }
     }
 }

@@ -17,6 +17,8 @@ mlkitSelfieSegmentation = "16.0.0-beta6"
 coil = "2.6.0"
 firebaseBom = "34.7.0"
 googleServices = "4.4.2"
+firebaseVertexAi = "16.0.2"
+googleGenAi = "0.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,9 +46,10 @@ tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.
 tensorflow-lite-gpu = { group = "org.tensorflow", name = "tensorflow-lite-gpu", version.ref = "tensorflowLite" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-ai = { group = "com.google.firebase", name = "firebase-ai" }
+firebase-ai = { group = "com.google.firebase", name = "firebase-vertexai", version.ref = "firebaseVertexAi" }
 firebase-appcheck = { group = "com.google.firebase", name = "firebase-appcheck" }
 firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
+google-genai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "googleGenAi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

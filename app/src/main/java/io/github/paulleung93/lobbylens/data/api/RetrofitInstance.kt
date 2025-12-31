@@ -20,6 +20,9 @@ object RetrofitInstance {
      * The key is sourced securely from the BuildConfig file.
      */
     private val client = OkHttpClient.Builder()
+        .connectTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
         .addInterceptor { chain ->
             val original = chain.request()
             val url = original.url.newBuilder()

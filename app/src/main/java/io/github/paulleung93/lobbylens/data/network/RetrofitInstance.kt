@@ -1,6 +1,7 @@
 package io.github.paulleung93.lobbylens.data.network
 
 import io.github.paulleung93.lobbylens.BuildConfig
+import io.github.paulleung93.lobbylens.data.api.GeminiApiService
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -18,18 +19,22 @@ object RetrofitInstance {
      * Creates an OkHttpClient that adds the FEC API key as a query parameter to every request.
      * This is the standard way to handle API key authentication with Retrofit.
      */
-    private val fecHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
-        val original = chain.request()
-        val originalHttpUrl = original.url
+    private val fecHttpClient = OkHttpClient.Builder()
+        .connectTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            val original = chain.request()
+            val originalHttpUrl = original.url
 
-        val url = originalHttpUrl.newBuilder()
-            .addQueryParameter("api_key", BuildConfig.FEC_API_KEY)
-            .build()
+            val url = originalHttpUrl.newBuilder()
+                .addQueryParameter("api_key", BuildConfig.FEC_API_KEY)
+                .build()
 
-        val requestBuilder = original.newBuilder().url(url)
-        val request = requestBuilder.build()
-        chain.proceed(request)
-    }.build()
+            val requestBuilder = original.newBuilder().url(url)
+            val request = requestBuilder.build()
+            chain.proceed(request)
+        }.build()
 
     /**
      * Lazily creates and configures a Retrofit instance for the new FEC API service.
@@ -108,5 +113,25 @@ object RetrofitInstance {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(VertexAiService::class.java)
+    }
+
+    private const val GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/"
+
+    private val geminiHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)  // 5 minutes
+        .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .addInterceptor(okhttp3.logging.HttpLoggingInterceptor().apply {
+            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+        })
+        .build()
+
+    val geminiApi: GeminiApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(GEMINI_BASE_URL)
+            .client(geminiHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GeminiApiService::class.java)
     }
 }

@@ -93,14 +93,15 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-    implementation(libs.coil.compose)
     
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.ai)
     implementation(libs.firebase.appcheck)
     debugImplementation(libs.firebase.appcheck.debug)
+    
+    // Google GenAI SDK
+    implementation(libs.google.genai)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -109,4 +110,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 }

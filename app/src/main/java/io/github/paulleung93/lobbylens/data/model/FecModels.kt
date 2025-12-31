@@ -34,7 +34,10 @@ data class FecCandidate(
     val party: String?,
 
     @SerializedName("principal_committees")
-    val principalCommittees: List<FecCommittee>? = null
+    val principalCommittees: List<FecCommittee>? = null,
+
+    // Transient field to store face detection results from Cloud Vision
+    var faceVertices: List<io.github.paulleung93.lobbylens.data.model.Vertex>? = null
 )
 
 /**
@@ -173,4 +176,13 @@ data class FecContributor(
 
     @SerializedName("count")
     val count: Int
+)
+
+/**
+ * Helper class for Gemini-guided logo placement.
+ */
+data class LogoPlacement(
+    @SerializedName("x") val x: Int,
+    @SerializedName("y") val y: Int,
+    @SerializedName("scale_percent") val scale_percent: Int
 )

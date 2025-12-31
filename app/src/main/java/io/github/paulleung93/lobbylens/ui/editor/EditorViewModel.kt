@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import io.github.paulleung93.lobbylens.data.model.FecCandidate
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
 import io.github.paulleung93.lobbylens.data.repository.PoliticianRepository
-import io.github.paulleung93.lobbylens.util.LogoUtils
 import io.github.paulleung93.lobbylens.util.Result
 import kotlinx.coroutines.launch
 
@@ -159,24 +158,6 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Fetches logos for a list of contributing employers.
-     * @param organizations The list of organizations from the FEC API.
-     */
-    private fun fetchOrganizationLogos(organizations: List<FecEmployerContribution>) {
-        viewModelScope.launch {
-            val logos = mutableMapOf<String, Bitmap>()
-            organizations.forEach { org ->
-                // The employer name is the organization name in this context
-                val orgName = org.employer
-                val logoBitmap = LogoUtils.fetchLogo(getApplication(), orgName)
-                if (logoBitmap != null) {
-                    logos[orgName] = logoBitmap
-                }
-            }
-            organizationLogos.value = logos
-        }
-    }
-        /**
      * Identifies a politician from an image using Cloud Vision.
      */
     fun identifyPolitician(bitmap: Bitmap) {
@@ -220,6 +201,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 return@launch
             }
 
+            // We now use Gemini for placement, so no need to pass the candidate explicitly for face bounds
             when (val result = repository.generatePoliticianImage(originalBitmap, companies)) {
                  is Result.Success -> {
                      Log.i(TAG, "generateImage: Success - image generated")

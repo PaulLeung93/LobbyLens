@@ -97,4 +97,69 @@ object ImageUtils {
         }
         context.startActivity(Intent.createChooser(intent, "Share Image"))
     }
+
+    /**
+     * Overlays a list of logo bitmaps onto the image.
+     * Use Gemini-guided placement if available.
+     *
+     * @param baseBitmap The original image.
+     * @param logos The list of logo bitmaps to overlay.
+     * @param placement Optional placement coordinates from Gemini.
+     * @return A new Bitmap with the logos overlaid.
+     */
+    fun overlayLogosOnImage(
+        baseBitmap: Bitmap, 
+        logos: List<Bitmap>,
+        placement: io.github.paulleung93.lobbylens.data.model.LogoPlacement? = null
+    ): Bitmap {
+        if (logos.isEmpty()) return baseBitmap
+
+        val mutableBitmap = baseBitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(mutableBitmap)
+        val paint = android.graphics.Paint()
+
+        // Default: Bottom placement
+        var startY = mutableBitmap.height - (mutableBitmap.height * 0.15).toInt() - 40
+        var targetSize = (mutableBitmap.height * 0.15).toInt()
+        var customX = -1
+        
+        // Gemini Placement
+        if (placement != null) {
+            // Gemini returns 0-1000 scale
+            val centerX = (placement.x / 1000f) * mutableBitmap.width
+            val centerY = (placement.y / 1000f) * mutableBitmap.height
+            var scale = (placement.scale_percent / 100f)
+            
+            // Safety clamp
+            if (scale < 0.05f) scale = 0.15f
+            if (scale > 0.5f) scale = 0.5f
+            
+            targetSize = (mutableBitmap.width * scale).toInt()
+            startY = centerY.toInt() - (targetSize / 2)
+            customX = centerX.toInt()
+        }
+        
+        // Configuration for logo placement
+        val padding = targetSize / 4
+        val totalRowWidth = (logos.size * targetSize) + ((logos.size - 1) * padding)
+        
+        // Center horizontally based on customX if provided, or image center
+        var currentX = if (customX != -1) {
+            customX - (totalRowWidth / 2)
+        } else {
+            (mutableBitmap.width - totalRowWidth) / 2
+        }
+
+        // Ensure we don't go off screen
+        if (startY + targetSize > mutableBitmap.height) startY = mutableBitmap.height - targetSize
+        if (startY < 0) startY = 0
+
+        for (logo in logos) {
+            val scaledLogo = Bitmap.createScaledBitmap(logo, targetSize, targetSize, true)
+            canvas.drawBitmap(scaledLogo, currentX.toFloat(), startY.toFloat(), paint)
+            currentX += targetSize + padding
+        }
+
+        return mutableBitmap
+    }
 }

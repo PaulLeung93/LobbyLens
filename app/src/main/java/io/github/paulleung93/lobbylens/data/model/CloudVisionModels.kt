@@ -24,7 +24,21 @@ data class CloudVisionResponse(
 
 data class AnnotateImageResponse(
     val webDetection: WebDetection?,
+    val faceAnnotations: List<FaceAnnotation>?,
     val error: Status?
+)
+
+data class FaceAnnotation(
+    val boundingPoly: BoundingPoly?
+)
+
+data class BoundingPoly(
+    val vertices: List<Vertex>
+)
+
+data class Vertex(
+    val x: Int?,
+    val y: Int?
 )
 
 data class WebDetection(
