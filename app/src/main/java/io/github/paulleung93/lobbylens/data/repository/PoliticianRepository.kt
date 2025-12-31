@@ -28,6 +28,7 @@ class PoliticianRepository {
     // In-memory cache for API responses.
     private val candidatesCache = mutableMapOf<String, Result<FecCandidateResponse>>()
     private val organizationsCache = mutableMapOf<String, Result<FecEmployerContributionResponse>>()
+    private val senateContributionsCache = mutableMapOf<String, Result<io.github.paulleung93.lobbylens.data.model.SenateContributionResponse>>()
 
     /**
      * Searches for candidates by name using the FEC API.
@@ -390,16 +391,37 @@ class PoliticianRepository {
     /**
      * Fetches lobbyist contributions (LD-203 reports) from the U.S. Senate Lobbying Disclosure API.
      * Searches by honoree name (the politician).
+     * Uses caching and pagination to improve performance.
      */
     suspend fun getSenateContributions(politicianName: String): Result<io.github.paulleung93.lobbylens.data.model.SenateContributionResponse> {
         val normalizedName = normalizeNameForSenate(politicianName)
         Log.d(TAG, "getSenateContributions: Fetching for normalizedName=$normalizedName (original=$politicianName)")
         
+        // Check cache first
+        senateContributionsCache[normalizedName]?.let {
+            Log.d(TAG, "getSenateContributions: Returning cached result for $normalizedName")
+            return it
+        }
+        
         return try {
-            val response = RetrofitInstance.senateLdaApi.getContributions(honoreeName = normalizedName)
+            // Use pagination with a reasonable page size to limit initial data transfer
+            // Fetching first 100 results should be sufficient for most use cases
+            val pageSize = 100
+            val response = RetrofitInstance.senateLdaApi.getContributions(
+                honoreeName = normalizedName,
+                page = 1,
+                pageSize = pageSize
+            )
             Log.d(TAG, "getSenateContributions: Response code: ${response.code()}")
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                val result = Result.Success(response.body()!!)
+                val count = result.data.results.size
+                val total = result.data.count
+                Log.d(TAG, "getSenateContributions: Success - fetched $count of $total total contributions")
+                
+                // Cache the result
+                senateContributionsCache[normalizedName] = result
+                result
             } else {
                 Log.e(TAG, "getSenateContributions: API Error: ${response.code()} ${response.message()}")
                 Result.Error(Exception("Senate API Error ${response.code()}: ${response.message()}"))

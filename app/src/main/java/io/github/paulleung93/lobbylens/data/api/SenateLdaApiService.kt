@@ -14,6 +14,8 @@ interface SenateLdaApiService {
 
     @GET("contributions/")
     suspend fun getContributions(
-        @Query("contribution_honoree") honoreeName: String
+        @Query("contribution_honoree") honoreeName: String,
+        @Query("page") page: Int? = null,
+        @Query("page_size") pageSize: Int? = null
     ): Response<SenateContributionResponse>
 }

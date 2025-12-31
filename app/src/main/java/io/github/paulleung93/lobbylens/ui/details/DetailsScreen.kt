@@ -430,7 +430,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                         if (lobbyistChartData.isNotEmpty()) {
                             item {
                                 Text(
-                                    text = if (lobbyistSelectedYear == "All") "Top Startups/Firms (All Time)" else "Top Startups/Firms ($lobbyistSelectedYear)",
+                                    text = if (lobbyistSelectedYear == "All") "Top Contributors (All Time)" else "Top Contributors ($lobbyistSelectedYear)",
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.padding(bottom = 8.dp)
