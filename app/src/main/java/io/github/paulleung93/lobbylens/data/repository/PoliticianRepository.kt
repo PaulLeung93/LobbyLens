@@ -222,8 +222,9 @@ class PoliticianRepository {
 
                 val contributors = if (contributorResponse.isSuccessful && contributorResponse.body() != null) {
                     val rawList = contributorResponse.body()!!.results
-                    // Manually aggregate by contributor name
-                    rawList.groupBy { it.contributorName }
+                    // Manually aggregate by contributor name, handling nulls
+                    rawList.filter { it.contributorName != null } // Safety filter
+                        .groupBy { it.contributorName ?: "Unknown PAC" }
                         .map { (name, items) ->
                             io.github.paulleung93.lobbylens.data.model.FecEmployerContribution(
                                 employer = name,
@@ -287,16 +288,53 @@ class PoliticianRepository {
                 // Naive heuristic: Look for the first entity that looks like a person's name or has high score
                 val entities = webAnnotations?.webEntities
                 Log.d(TAG, "identifyPolitician: Found ${entities?.size ?: 0} web entities")
+
+                // Log all entities for debugging to see what Cloud Vision found
+                entities?.forEach { 
+                    Log.d(TAG, "identifyPolitician: Detected entity: ${it.description} (score: ${it.score})") 
+                }
+
                 if (entities.isNullOrEmpty()) {
                     Log.w(TAG, "identifyPolitician: No entities detected")
                     return Result.Error(Exception("No entities detected."))
                 }
 
-                // Iterate through top 3 entites and try to search FEC
-                for (entity in entities.take(3)) {
-                    if (entity.description != null) {
-                        Log.d(TAG, "identifyPolitician: Trying entity: ${entity.description} (score: ${entity.score})")
-                        val searchResult = searchCandidatesByName(entity.description)
+                // Entities to ignore (generic terms that match too broadly)
+                val ignoredEntities = listOf(
+                    "United States", "Politics", "Government", "Society", 
+                    "Public Speaking", "Event", "Official", "Businessperson", 
+                    "Spokesperson", "Chairperson", "Senator", "Representative",
+                    "Computer", "Computer Keyboard", "Keybord", "Mouse", "Computer mouse", 
+                    "Screen", "Monitor", "Laptop", "MacBook", "Tablet", "USB", 
+                    "DisplayLink", "Wireless keyboard"
+                )
+
+                // Iterate through top 10 entities and try to search FEC
+                for (entity in entities.take(10)) {
+                    val description = entity.description
+                    if (description != null) {
+                        // 1. Skip blocked entities
+                        if (ignoredEntities.any { description.contains(it, ignoreCase = true) }) {
+                            Log.d(TAG, "identifyPolitician: Skipping generic entity: $description")
+                            continue
+                        }
+
+                        Log.d(TAG, "identifyPolitician: Trying entity: $description (score: ${entity.score})")
+                        var searchResult = searchCandidatesByName(description)
+                        
+                        // Fallback: If no results and name is long, try first 2 words (e.g. "Bernie Sanders Guide..." -> "Bernie Sanders")
+                        if (searchResult is Result.Success && searchResult.data.results.isEmpty()) {
+                            val words = description.split(" ")
+                            if (words.size > 2) {
+                                val shortQuery = "${words[0]} ${words[1]}"
+                                Log.d(TAG, "identifyPolitician: Retry with shorter query: '$shortQuery'")
+                                val retryResult = searchCandidatesByName(shortQuery)
+                                if (retryResult is Result.Success && retryResult.data.results.isNotEmpty()) {
+                                    searchResult = retryResult // Use the successful retry
+                                }
+                            }
+                        }
+
                         if (searchResult is Result.Success && searchResult.data.results.isNotEmpty()) {
                             // Match found!
                             val candidate = searchResult.data.results.first()
