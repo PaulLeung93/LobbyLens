@@ -322,7 +322,7 @@ class PoliticianRepository {
                         Log.d(TAG, "identifyPolitician: Trying entity: $description (score: ${entity.score})")
                         var searchResult = searchCandidatesByName(description)
                         
-                        // Fallback: If no results and name is long, try first 2 words (e.g. "Bernie Sanders Guide..." -> "Bernie Sanders")
+                        // Fallback 1: If no results and name is long, try first 2 words (e.g. "Bernie Sanders Guide..." -> "Bernie Sanders")
                         if (searchResult is Result.Success && searchResult.data.results.isEmpty()) {
                             val words = description.split(" ")
                             if (words.size > 2) {
@@ -331,6 +331,30 @@ class PoliticianRepository {
                                 val retryResult = searchCandidatesByName(shortQuery)
                                 if (retryResult is Result.Success && retryResult.data.results.isNotEmpty()) {
                                     searchResult = retryResult // Use the successful retry
+                                }
+                            }
+                        }
+                        
+                        // Fallback 2: If still no results, try name variations (nickname <-> formal name)
+                        if (searchResult is Result.Success && searchResult.data.results.isEmpty()) {
+                            val nameToVary = if (description.split(" ").size > 2) {
+                                "${description.split(" ")[0]} ${description.split(" ")[1]}"
+                            } else {
+                                description
+                            }
+                            
+                            val variations = generateNameVariations(nameToVary)
+                            Log.d(TAG, "identifyPolitician: Trying ${variations.size} name variations for '$nameToVary'")
+                            
+                            for (variation in variations) {
+                                if (variation == description || variation == nameToVary) continue // Skip original, already tried
+                                
+                                Log.d(TAG, "identifyPolitician: Trying variation: '$variation'")
+                                val variationResult = searchCandidatesByName(variation)
+                                if (variationResult is Result.Success && variationResult.data.results.isNotEmpty()) {
+                                    Log.i(TAG, "identifyPolitician: Found match using name variation: '$variation'")
+                                    searchResult = variationResult
+                                    break
                                 }
                             }
                         }
@@ -408,14 +432,75 @@ class PoliticianRepository {
     }
 
     /**
-     * Generates a new image using Gemini 2.5 Flash Image to edit the original photo,
+     * Generates name variations for common nicknames to help match politicians
+     * when Cloud Vision returns informal names but FEC uses formal names.
+     * 
+     * For example: "Chuck Schumer" → ["Chuck Schumer", "Charles Schumer"]
+     */
+    private fun generateNameVariations(name: String): List<String> {
+        val variations = mutableListOf(name) // Always include original
+        
+        // Common nickname mappings
+        val nicknameMap = mapOf(
+            "Chuck" to "Charles",
+            "Bill" to "William",
+            "Bob" to "Robert",
+            "Dick" to "Richard",
+            "Jim" to "James",
+            "Mike" to "Michael",
+            "Tom" to "Thomas",
+            "Joe" to "Joseph",
+            "Tim" to "Timothy",
+            "Dan" to "Daniel",
+            "Dave" to "David",
+            "Ted" to "Edward",
+            "Tony" to "Anthony",
+            "Bernie" to "Bernard",
+            "Beth" to "Elizabeth",
+            "Liz" to "Elizabeth",
+            "Katie" to "Katherine",
+            "Kate" to "Katherine",
+            "Chris" to "Christopher",
+            "Matt" to "Matthew",
+            "Alex" to "Alexander",
+            "Andy" to "Andrew",
+            "Greg" to "Gregory",
+            "Steve" to "Steven",
+            "Pat" to "Patricia"
+        )
+        
+        // Split name into words
+        val words = name.split(" ")
+        if (words.size >= 2) {
+            val firstName = words[0]
+            val lastName = words.drop(1).joinToString(" ")
+            
+            // If first name is a nickname, add formal version
+            nicknameMap[firstName]?.let { formalName ->
+                variations.add("$formalName $lastName")
+                Log.d(TAG, "generateNameVariations: Added variation '$formalName $lastName' for nickname '$firstName'")
+            }
+            
+            // Also try the reverse - if formal name, try common nickname
+            val entry = nicknameMap.entries.find { it.value == firstName }
+            entry?.let {
+                variations.add("${it.key} $lastName")
+                Log.d(TAG, "generateNameVariations: Added variation '${it.key} $lastName' for formal name '$firstName'")
+            }
+        }
+        
+        return variations.distinct()
+    }
+
+    /**
+     * Generates a new image using Gemini 3 Pro Image to edit the original photo,
      * adding sponsor logos to the politician's clothing naturally via AI.
      */
     suspend fun generatePoliticianImage(
         baseBitmap: Bitmap, 
         logos: List<String>
     ): Result<Bitmap> {
-        Log.d(TAG, "generatePoliticianImage: Starting AI image editing with Gemini 2.5 Flash Image via REST API")
+        Log.d(TAG, "generatePoliticianImage: Starting AI image editing with Gemini 3 Pro Image via REST API")
         Log.d(TAG, "generatePoliticianImage: Organizations: ${logos.joinToString(", ")}")
         return try {
             val companyNames = logos.joinToString(", ")
@@ -486,6 +571,9 @@ class PoliticianRepository {
             
             val geminiResponse = response.body()!!
             
+            // Log the full response for debugging
+            Log.d(TAG, "generatePoliticianImage: Response received - candidates count: ${geminiResponse.candidates?.size ?: 0}")
+            
             if (geminiResponse.error != null) {
                 Log.e(TAG, "generatePoliticianImage: Gemini error: ${geminiResponse.error.message}")
                 return Result.Error(Exception("Gemini error: ${geminiResponse.error.message}"))
@@ -498,10 +586,19 @@ class PoliticianRepository {
                 return Result.Error(Exception("No image generated"))
             }
             
+            Log.d(TAG, "generatePoliticianImage: Candidate found - finishReason: ${candidate.finishReason}, has content: ${candidate.content != null}, has parts: ${candidate.content.parts != null}")
+            
             var editedImageBase64: String? = null
             val textParts = mutableListOf<String>()
             
-            for (part in candidate.content.parts) {
+            // Gemini 3.0 might return null parts, so add null safety
+            val responseParts = candidate.content.parts
+            if (responseParts == null) {
+                Log.e(TAG, "generatePoliticianImage: Response has no parts array")
+                return Result.Error(Exception("Invalid response structure: no parts"))
+            }
+            
+            for (part in responseParts) {
                 if (part.inlineData != null) {
                     editedImageBase64 = part.inlineData.data
                     break

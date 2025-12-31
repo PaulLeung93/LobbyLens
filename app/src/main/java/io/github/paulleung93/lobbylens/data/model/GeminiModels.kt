@@ -20,7 +20,7 @@ data class GeminiGenerationConfig(
 
 data class GeminiContent(
     @SerializedName("parts")
-    val parts: List<GeminiPart>
+    val parts: List<GeminiPart>? = null // Made nullable for Gemini 3.0 compatibility
 )
 
 data class GeminiPart(

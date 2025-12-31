@@ -12,7 +12,7 @@ import retrofit2.http.POST
  */
 interface GeminiApiService {
     
-    @POST("v1beta/models/gemini-2.5-flash-image:generateContent")
+    @POST("v1beta/models/gemini-3-pro-image-preview:generateContent")
     suspend fun generateContent(
         @Header("x-goog-api-key") apiKey: String,
         @Body request: GeminiRequest
