@@ -136,7 +136,11 @@ object RetrofitInstance {
      * Creates a client for the Senate LDA API that adds the Authorization token header.
      */
     private fun getSenateClient(): OkHttpClient {
-        return OkHttpClient.Builder().addInterceptor { chain ->
+        return OkHttpClient.Builder()
+            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .addInterceptor { chain ->
             val original = chain.request()
             val builder = original.newBuilder()
             

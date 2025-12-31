@@ -103,6 +103,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.ai)
     implementation(libs.firebase.appcheck)
+    implementation(libs.androidx.compose.foundation.layout)
     debugImplementation(libs.firebase.appcheck.debug)
     
     // Google GenAI SDK

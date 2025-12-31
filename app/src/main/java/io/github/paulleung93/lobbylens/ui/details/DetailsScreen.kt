@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.foundation.layout.size
@@ -136,97 +137,108 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                         }
                     }
 
-                    // Header & Filter Chips
-                    androidx.compose.foundation.layout.Column(
-                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-                    ) {
-                        // Search Bar
-                        androidx.compose.material3.OutlinedTextField(
-                            value = campaignSearchQuery,
-                            onValueChange = { viewModel.updateCampaignSearchQuery(it) },
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            placeholder = { Text("Search by contributor...") },
-                            singleLine = true,
-                            leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search") },
-                            trailingIcon = if (campaignSearchQuery.isNotEmpty()) {
-                                {
-                                    androidx.compose.material3.IconButton(onClick = { viewModel.updateCampaignSearchQuery("") }) {
-                                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Clear")
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        // Search Bar & Year Filter Chips
+                        item {
+                            androidx.compose.foundation.layout.Column(
+                                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                            ) {
+                                // Search Bar
+                                androidx.compose.material3.OutlinedTextField(
+                                    value = campaignSearchQuery,
+                                    onValueChange = { viewModel.updateCampaignSearchQuery(it) },
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                    placeholder = { Text("Search by contributor...") },
+                                    singleLine = true,
+                                    leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search") },
+                                    trailingIcon = if (campaignSearchQuery.isNotEmpty()) {
+                                        {
+                                            androidx.compose.material3.IconButton(onClick = { viewModel.updateCampaignSearchQuery("") }) {
+                                                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Clear")
+                                            }
+                                        }
+                                    } else null
+                                )
+
+                                androidx.compose.foundation.layout.Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.material3.FilterChip(
+                                        selected = selectedYear == "All",
+                                        onClick = { viewModel.selectYear("All") },
+                                        label = { Text("All Years") },
+                                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    )
+                                    historicalOrganizations.keys.sortedDescending().forEach { year ->
+                                        androidx.compose.material3.FilterChip(
+                                            selected = selectedYear == year,
+                                            onClick = { viewModel.selectYear(year) },
+                                            label = { Text(year) },
+                                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        )
                                     }
                                 }
-                            } else null
-                        )
+                            }
+                        }
 
-                        androidx.compose.foundation.layout.Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            androidx.compose.material3.FilterChip(
-                                selected = selectedYear == "All",
-                                onClick = { viewModel.selectYear("All") },
-                                label = { Text("All Years") },
-                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        // Sort Options (Campaign)
+                        item {
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                            ) {
+                                    val sortOptions = listOf(
+                                    "$ Highest" to CampaignSortOption.AMOUNT_DESC,
+                                    "$ Lowest" to CampaignSortOption.AMOUNT_ASC
                                 )
-                            )
-                            historicalOrganizations.keys.sortedDescending().forEach { year ->
-                                androidx.compose.material3.FilterChip(
-                                    selected = selectedYear == year,
-                                    onClick = { viewModel.selectYear(year) },
-                                    label = { Text(year) },
-                                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                sortOptions.forEach { (label, option) ->
+                                    androidx.compose.material3.FilterChip(
+                                        selected = campaignSort == option,
+                                        onClick = { viewModel.updateCampaignSort(option) },
+                                        label = { Text(label) },
+                                        leadingIcon = if (campaignSort == option) {
+                                            { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                        } else null
                                     )
+                                }
+                            }
+                        }
+
+                        // Bar Chart
+                        if (chartData.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = if (selectedYear == "All") "Top Contributors (All Time)" else "Top Contributors ($selectedYear)",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
                             }
-                        }
-                    }
-
-                    // Sort Options (Campaign)
-                    androidx.compose.foundation.layout.Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                    ) {
-                            val sortOptions = listOf(
-                            "$ Highest" to CampaignSortOption.AMOUNT_DESC,
-                            "$ Lowest" to CampaignSortOption.AMOUNT_ASC
-                        )
-                        sortOptions.forEach { (label, option) ->
-                            androidx.compose.material3.FilterChip(
-                                selected = campaignSort == option,
-                                onClick = { viewModel.updateCampaignSort(option) },
-                                label = { Text(label) },
-                                leadingIcon = if (campaignSort == option) {
-                                    { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                } else null
-                            )
-                        }
-                    }
-
-                    if (chartData.isNotEmpty()) {
-                        Text(
-                            text = if (selectedYear == "All") "Top Contributors (All Time)" else "Top Contributors ($selectedYear)",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        BarChart(
-                            data = chartData,
-                            valueFormatter = { value ->
-                                NumberFormat.getCurrencyInstance().apply {
-                                    maximumFractionDigits = 0
-                                }.format(value)
+                            item {
+                                BarChart(
+                                    data = chartData,
+                                    valueFormatter = { value ->
+                                        NumberFormat.getCurrencyInstance().apply {
+                                            maximumFractionDigits = 0
+                                        }.format(value)
+                                    }
+                                )
                             }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
 
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if (selectedYear == "All") {
                             historicalOrganizations.forEach { (cycle, organizations) ->
                                     // In "All" view, we need to handle search query manually here or rely on ViewModel returning a flattened list for "All" (which I noted in ViewModel comments but didn't implement fully for "All").
@@ -337,99 +349,107 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                             .take(5)
                     }
 
-                    // Search, Sort & Filters Header
-                    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                        // Search Bar
-                        androidx.compose.material3.OutlinedTextField(
-                            value = lobbyistSearchQuery,
-                            onValueChange = { viewModel.updateLobbyistSearchQuery(it) },
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            placeholder = { Text("Search by donor, firm or payee...") },
-                            singleLine = true,
-                            leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search") },
-                            trailingIcon = if (lobbyistSearchQuery.isNotEmpty()) {
-                                {
-                                    androidx.compose.material3.IconButton(onClick = { viewModel.updateLobbyistSearchQuery("") }) {
-                                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Clear")
-                                    }
-                                }
-                            } else null
-                        )
-
-                        // Sort Options
-                        androidx.compose.foundation.layout.Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                        ) {
-                             val sortOptions = listOf(
-                                "Newest" to LobbyistSortOption.DATE_DESC,
-                                "Oldest" to LobbyistSortOption.DATE_ASC,
-                                "$ Highest" to LobbyistSortOption.AMOUNT_DESC,
-                                "$ Lowest" to LobbyistSortOption.AMOUNT_ASC
-                            )
-                            sortOptions.forEach { (label, option) ->
-                                androidx.compose.material3.FilterChip(
-                                    selected = lobbyistSort == option,
-                                    onClick = { viewModel.updateLobbyistSort(option) },
-                                    label = { Text(label) },
-                                    leadingIcon = if (lobbyistSort == option) {
-                                        { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        // Search, Sort & Filters Header
+                        item {
+                            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                                // Search Bar
+                                androidx.compose.material3.OutlinedTextField(
+                                    value = lobbyistSearchQuery,
+                                    onValueChange = { viewModel.updateLobbyistSearchQuery(it) },
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                    placeholder = { Text("Search by donor, firm or payee...") },
+                                    singleLine = true,
+                                    leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search") },
+                                    trailingIcon = if (lobbyistSearchQuery.isNotEmpty()) {
+                                        {
+                                            androidx.compose.material3.IconButton(onClick = { viewModel.updateLobbyistSearchQuery("") }) {
+                                                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Clear, contentDescription = "Clear")
+                                            }
+                                        }
                                     } else null
                                 )
-                            }
-                        }
-                        
-                         // Year Filters
-                        androidx.compose.foundation.layout.Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            androidx.compose.material3.FilterChip(
-                                selected = lobbyistSelectedYear == "All",
-                                onClick = { viewModel.selectLobbyistYear("All") },
-                                label = { Text("All Years") },
-                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                            lobbyistUniqueYears.forEach { year ->
-                                androidx.compose.material3.FilterChip(
-                                    selected = lobbyistSelectedYear == year,
-                                    onClick = { viewModel.selectLobbyistYear(year) },
-                                    label = { Text(year) },
-                                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+
+                                // Sort Options
+                                androidx.compose.foundation.layout.Row(
+                                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                                ) {
+                                     val sortOptions = listOf(
+                                        "Newest" to LobbyistSortOption.DATE_DESC,
+                                        "Oldest" to LobbyistSortOption.DATE_ASC,
+                                        "$ Highest" to LobbyistSortOption.AMOUNT_DESC,
+                                        "$ Lowest" to LobbyistSortOption.AMOUNT_ASC
                                     )
-                                )
+                                    sortOptions.forEach { (label, option) ->
+                                        androidx.compose.material3.FilterChip(
+                                            selected = lobbyistSort == option,
+                                            onClick = { viewModel.updateLobbyistSort(option) },
+                                            label = { Text(label) },
+                                            leadingIcon = if (lobbyistSort == option) {
+                                                { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                            } else null
+                                        )
+                                    }
+                                }
+                                
+                                 // Year Filters
+                                androidx.compose.foundation.layout.Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.material3.FilterChip(
+                                        selected = lobbyistSelectedYear == "All",
+                                        onClick = { viewModel.selectLobbyistYear("All") },
+                                        label = { Text("All Years") },
+                                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    )
+                                    lobbyistUniqueYears.forEach { year ->
+                                        androidx.compose.material3.FilterChip(
+                                            selected = lobbyistSelectedYear == year,
+                                            onClick = { viewModel.selectLobbyistYear(year) },
+                                            label = { Text(year) },
+                                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
-                    }
 
-                    if (lobbyistChartData.isNotEmpty()) {
-                        Text(
-                            text = if (lobbyistSelectedYear == "All") "Top Startups/Firms (All Time)" else "Top Startups/Firms ($lobbyistSelectedYear)",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        BarChart(
-                            data = lobbyistChartData,
-                            valueFormatter = { value ->
-                                NumberFormat.getCurrencyInstance().apply {
-                                    maximumFractionDigits = 0
-                                }.format(value)
+                        // Lobbyist Chart
+                        if (lobbyistChartData.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = if (lobbyistSelectedYear == "All") "Top Startups/Firms (All Time)" else "Top Startups/Firms ($lobbyistSelectedYear)",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
                             }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            item {
+                                BarChart(
+                                    data = lobbyistChartData,
+                                    valueFormatter = { value ->
+                                        NumberFormat.getCurrencyInstance().apply {
+                                            maximumFractionDigits = 0
+                                        }.format(value)
+                                    }
+                                )
+                            }
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
                         item {
                             Text(
                                 text = "Lobbyist Disclosures (LD-203)",

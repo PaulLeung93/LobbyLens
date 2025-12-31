@@ -19,6 +19,7 @@ firebaseBom = "34.7.0"
 googleServices = "4.4.2"
 firebaseVertexAi = "16.0.2"
 googleGenAi = "0.9.0"
+foundationLayout = "1.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +51,7 @@ firebase-ai = { group = "com.google.firebase", name = "firebase-vertexai", versi
 firebase-appcheck = { group = "com.google.firebase", name = "firebase-appcheck" }
 firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
 google-genai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "googleGenAi" }
+androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
