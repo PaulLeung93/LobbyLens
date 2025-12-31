@@ -55,7 +55,6 @@ fun EditorScreen(
     val isLoading by remember { viewModel.isLoading }
     val topOrganizations by remember { viewModel.topOrganizations }
     val generatedImage by remember { viewModel.generatedImage }
-    val selectedCycle by remember { viewModel.selectedCycle }
 
     // State for the image processing pipeline
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -118,6 +117,14 @@ fun EditorScreen(
                 }
             }
 
+            // Effect 3: Update recognizedCid when candidate is found
+            LaunchedEffect(candidates) {
+                if (candidates.isNotEmpty()) {
+                    recognizedCid = candidates.first().candidateId
+                    println("EditorScreen: Recognized CID updated to $recognizedCid")
+                }
+            }
+
             // The UI for the image processing flow.
             Column(
                 modifier = Modifier
@@ -127,13 +134,24 @@ fun EditorScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header
-                Text(
-                    text = "ANALYZING CANDIDATE",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.sp,
-                    textAlign = TextAlign.Center
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (candidates.isNotEmpty()) candidates.first().name.uppercase() else "ANALYZING CANDIDATE",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    if (candidates.isNotEmpty()) {
+                        val candidate = candidates.first()
+                        Text(
+                            text = "${candidate.party ?: "Unspecified"} • ${candidate.state ?: "Unknown State"}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
 
                 // Processing Status
                 Text(
@@ -164,15 +182,7 @@ fun EditorScreen(
                     }
                 }
 
-                if (recognizedCid != null) {
-                    CycleSelector(
-                        selectedCycle = selectedCycle,
-                        onCycleSelected = { newCycle ->
-                            Log.d("EditorScreen", "CycleSelector: User selected cycle $newCycle")
-                            viewModel.fetchTopOrganizations(recognizedCid!!, newCycle)
-                        }
-                    )
-                }
+
 
                 if (recognizedCid != null && processingState == "Done!") {
                     Row(
@@ -185,6 +195,7 @@ fun EditorScreen(
                                 Log.d("EditorScreen", "Button: Save image clicked")
                                 displayBitmap?.let { bmp ->
                                     ImageUtils.saveImageToGallery(context, bmp, "LobbyLens_Image")
+                                    android.widget.Toast.makeText(context, "Image Saved to Gallery", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -377,37 +388,4 @@ fun EditorScreen(
     }
 }
 
-@Composable
-fun CycleSelector(selectedCycle: String, onCycleSelected: (String) -> Unit) {
-    val cycles = listOf("2024", "2022", "2020", "2018")
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            "SELECT ELECTION CYCLE",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
-            letterSpacing = 1.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            cycles.forEach { cycle ->
-                val isSelected = cycle == selectedCycle
-                val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha=0.7f)
-                
-                Button(
-                    onClick = { onCycleSelected(cycle) },
-                    colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
-                    shape = RoundedCornerShape(50),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    modifier = Modifier.height(36.dp),
-                    border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha=0.3f)) else null
-                ) {
-                    Text(cycle, style = MaterialTheme.typography.labelMedium)
-                }
-            }
-        }
-    }
-}
+
