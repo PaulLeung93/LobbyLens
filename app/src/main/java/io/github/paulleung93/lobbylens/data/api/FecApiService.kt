@@ -17,12 +17,16 @@ interface FecApiService {
      *
      * @param apiKey Your personal API key for the FEC API.
      * @param query The name to search for.
+     * @param perPage Number of results per page (max 100).
+     * @param page Page number to retrieve.
      * @return A [FecCandidateResponse] containing a list of matching candidates.
      */
     @GET("candidates/search")
     suspend fun searchCandidates(
         @Query("api_key") apiKey: String = BuildConfig.FEC_API_KEY,
-        @Query("q") query: String
+        @Query("q") query: String,
+        @Query("per_page") perPage: Int = 100,
+        @Query("page") page: Int = 1
     ): Response<FecCandidateResponse>
 
     /**

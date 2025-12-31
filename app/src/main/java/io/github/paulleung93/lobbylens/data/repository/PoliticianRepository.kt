@@ -32,6 +32,7 @@ class PoliticianRepository {
 
     /**
      * Searches for candidates by name using the FEC API.
+     * Fetches all pages to ensure the complete list is returned.
      */
     suspend fun searchCandidatesByName(name: String): Result<FecCandidateResponse> {
         Log.d(TAG, "searchCandidatesByName: Searching for candidate: $name")
@@ -40,18 +41,56 @@ class PoliticianRepository {
             return it
         }
 
+        val allCandidates = mutableListOf<io.github.paulleung93.lobbylens.data.model.FecCandidate>()
+        var page = 1
+        var hasMorePages = true
+        // Safety limit to prevent infinite loops if API behaves unexpectedly
+        val maxPages = 10
+
         return try {
-            val response = apiService.searchCandidates(query = name)
-            Log.d(TAG, "searchCandidatesByName: Response code: ${response.code()}")
-            if (response.isSuccessful && response.body() != null) {
-                val result = Result.Success(response.body()!!)
-                Log.d(TAG, "searchCandidatesByName: Found ${result.data.results.size} candidates")
-                candidatesCache[name] = result
-                result
-            } else {
-                Log.e(TAG, "searchCandidatesByName: API Error: ${response.message()}")
-                Result.Error(Exception("API Error: ${response.message()}"))
+            while (hasMorePages && page <= maxPages) {
+                Log.d(TAG, "searchCandidatesByName: Fetching page $page for query '$name'")
+                val response = apiService.searchCandidates(
+                    query = name,
+                    perPage = 100, // Maximize per page
+                    page = page
+                )
+
+                Log.d(TAG, "searchCandidatesByName: Response code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
+                    val batch = response.body()!!.results
+                    if (batch.isEmpty()) {
+                        hasMorePages = false
+                    } else {
+                        allCandidates.addAll(batch)
+                        // If we got fewer than requested, we are at the end
+                        if (batch.size < 100) {
+                            hasMorePages = false
+                        } else {
+                            page++
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "searchCandidatesByName: API Error on page $page: ${response.message()}")
+                    // If we have some data, return what we have; otherwise return error
+                    if (allCandidates.isNotEmpty()) {
+                        Log.w(TAG, "searchCandidatesByName: Returning partial results (${allCandidates.size} candidates)")
+                        break
+                    } else {
+                        return Result.Error(Exception("API Error: ${response.message()}"))
+                    }
+                }
             }
+
+            Log.d(TAG, "searchCandidatesByName: Finished fetching. Total found: ${allCandidates.size} candidates")
+            // Wrap in a response object
+            val combinedResponse = FecCandidateResponse(
+                results = allCandidates
+            )
+            val result = Result.Success(combinedResponse)
+            candidatesCache[name] = result
+            result
+
         } catch (e: Exception) {
             Log.e(TAG, "searchCandidatesByName: Exception occurred", e)
             Result.Error(e)
