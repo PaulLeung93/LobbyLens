@@ -43,6 +43,7 @@ class DetailsViewModel : ViewModel() {
     val isSenateLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
     val senateErrorMessage = mutableStateOf<String?>(null)
+    val candidate = mutableStateOf<io.github.paulleung93.lobbylens.data.model.FecCandidate?>(null)
     val candidateName = mutableStateOf<String?>(null)
     val principalCommitteeId = mutableStateOf<String?>(null)
     
@@ -158,7 +159,9 @@ class DetailsViewModel : ViewModel() {
             // We need the candidate's name for this. Let's fetch it if we don't have it.
             when (val candidateResult = repository.getCandidateDetails(cid)) {
                 is Result.Success -> {
-                    val name = candidateResult.data.results.firstOrNull()?.name
+                    val candidateObj = candidateResult.data.results.firstOrNull()
+                    candidate.value = candidateObj
+                    val name = candidateObj?.name
                     candidateName.value = name
                     if (name != null) {
                         fetchSenateData(name)

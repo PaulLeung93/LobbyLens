@@ -34,10 +34,16 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.text.style.TextOverflow
 
 
 @Composable
@@ -62,57 +68,95 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
     val principalCommitteeId by remember { viewModel.principalCommitteeId }
     val campaignSort by remember { viewModel.campaignSort }
     val campaignSearchQuery by remember { viewModel.campaignSearchQuery }
+    val candidate by remember { viewModel.candidate }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            if (isLoading) {
-                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                     androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                 }
-            } else if (errorMessage != null) {
-                Text(
-                    text = errorMessage ?: "An unknown error occurred.",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            } else {
-                // View Selector
-                androidx.compose.material3.TabRow(
-                    selectedTabIndex = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) 0 else 1,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    indicator = { tabPositions ->
-                        androidx.compose.material3.TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(tabPositions[if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) 0 else 1]),
-                            color = MaterialTheme.colorScheme.primary,
-                            height = 3.dp
-                        )
-                    }
+            // Ultra-Compact Custom Header Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.size(32.dp) // Smaller touch target for density
                 ) {
-                    androidx.compose.material3.Tab(
-                        selected = viewModel.selectedView.value == DetailsViewType.LOBBYIST,
-                        onClick = { viewModel.updateViewType(DetailsViewType.LOBBYIST) },
-                        text = { 
-                            Text(
-                                "Lobbyist Disclosures",
-                                fontWeight = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) FontWeight.Bold else FontWeight.Normal,
-                                color = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            ) 
-                        }
-                    )
-                    androidx.compose.material3.Tab(
-                        selected = viewModel.selectedView.value == DetailsViewType.CAMPAIGN,
-                        onClick = { viewModel.updateViewType(DetailsViewType.CAMPAIGN) },
-                        text = { 
-                            Text(
-                                "Campaign Contributions",
-                                fontWeight = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) FontWeight.Bold else FontWeight.Normal,
-                                color = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            ) 
-                        }
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (candidate != null) {
+                        "${normalizeName(candidate!!.name)} (${candidate?.party ?: "N/A"}-${candidate?.state ?: "N/A"})"
+                    } else if (isLoading) {
+                        "Loading..."
+                    } else {
+                        "Details"
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                        androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else if (errorMessage != null) {
+                    Text(
+                        text = errorMessage ?: "An unknown error occurred.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                } else {
+                    // View Selector
+                    androidx.compose.material3.TabRow(
+                        selectedTabIndex = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) 0 else 1,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        indicator = { tabPositions ->
+                            androidx.compose.material3.TabRowDefaults.Indicator(
+                                Modifier.tabIndicatorOffset(tabPositions[if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) 0 else 1]),
+                                color = MaterialTheme.colorScheme.primary,
+                                height = 3.dp
+                            )
+                        }
+                    ) {
+                        androidx.compose.material3.Tab(
+                            selected = viewModel.selectedView.value == DetailsViewType.LOBBYIST,
+                            onClick = { viewModel.updateViewType(DetailsViewType.LOBBYIST) },
+                            text = { 
+                                Text(
+                                    "Lobbyist Disclosures",
+                                    fontWeight = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (viewModel.selectedView.value == DetailsViewType.LOBBYIST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                ) 
+                            }
+                        )
+                        androidx.compose.material3.Tab(
+                            selected = viewModel.selectedView.value == DetailsViewType.CAMPAIGN,
+                            onClick = { viewModel.updateViewType(DetailsViewType.CAMPAIGN) },
+                            text = { 
+                                Text(
+                                    "Campaign Contributions",
+                                    fontWeight = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                ) 
+                            }
+                        )
+                    }
 
                 if (viewModel.selectedView.value == DetailsViewType.CAMPAIGN) {
                     // --- CAMPAIGN VIEW ---
@@ -586,7 +630,7 @@ fun LobbyistContributionCard(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -683,7 +727,7 @@ fun ContributorItem(
                     )
                      Spacer(modifier = Modifier.width(4.dp))
                     androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -694,3 +738,24 @@ fun ContributorItem(
         }
     }
 }
+
+private fun normalizeName(name: String): String {
+    if (name.isBlank()) return ""
+    return try {
+        val parts = name.split(",").map { it.trim() }
+        if (parts.size >= 2) {
+            val last = parts[0].lowercase().capitalizeWords()
+            val remaining = parts[1].lowercase().capitalizeWords()
+            "$remaining $last"
+        } else {
+            name.lowercase().capitalizeWords()
+        }
+    } catch (e: Exception) {
+        name
+    }
+}
+
+private fun String.capitalizeWords(): String =
+    this.split(" ")
+        .filter { it.isNotBlank() }
+        .joinToString(" ") { it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase() else char.toString() } }
