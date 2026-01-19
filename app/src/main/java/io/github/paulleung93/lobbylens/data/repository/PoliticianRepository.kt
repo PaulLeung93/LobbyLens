@@ -7,9 +7,12 @@ import io.github.paulleung93.lobbylens.data.api.FecApiService
 import io.github.paulleung93.lobbylens.data.api.RetrofitInstance
 import io.github.paulleung93.lobbylens.data.model.FecCandidateResponse
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContributionResponse
+import io.github.paulleung93.lobbylens.util.LruCacheWithTtl
 import io.github.paulleung93.lobbylens.util.Result
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 
 /**
  * Repository for fetching politician data from the official FEC (Federal Election Commission) API.
@@ -25,10 +28,19 @@ class PoliticianRepository {
         private const val TAG = "PoliticianRepository"
     }
 
-    // In-memory cache for API responses.
-    private val candidatesCache = mutableMapOf<String, Result<FecCandidateResponse>>()
-    private val organizationsCache = mutableMapOf<String, Result<FecEmployerContributionResponse>>()
-    private val senateContributionsCache = mutableMapOf<String, Result<io.github.paulleung93.lobbylens.data.model.SenateContributionResponse>>()
+    // In-memory caches with LRU eviction and TTL.
+    private val candidatesCache = LruCacheWithTtl<String, Result<FecCandidateResponse>>(
+        maxSize = 50,
+        ttlMillis = 30 * 60 * 1000L // 30 minutes
+    )
+    private val organizationsCache = LruCacheWithTtl<String, Result<FecEmployerContributionResponse>>(
+        maxSize = 100,
+        ttlMillis = 30 * 60 * 1000L // 30 minutes
+    )
+    private val senateContributionsCache = LruCacheWithTtl<String, Result<io.github.paulleung93.lobbylens.data.model.SenateContributionResponse>>(
+        maxSize = 50,
+        ttlMillis = 30 * 60 * 1000L // 30 minutes
+    )
 
     /**
      * Searches for candidates by name using the FEC API.
@@ -571,12 +583,8 @@ class PoliticianRepository {
         return try {
             val companyNames = logos.joinToString(", ")
             
-            // 1. Encode image to base64
-            val base64Image = bitmapToBase64(baseBitmap)
-            if (base64Image == null) {
-                Log.e(TAG, "generatePoliticianImage: Failed to encode base image")
-                return Result.Error(Exception("Failed to encode base image"))
-            }
+            // 1. Encode image to base64 (using ImageUtils for proper threading)
+            val base64Image = io.github.paulleung93.lobbylens.util.ImageUtils.bitmapToBase64(baseBitmap)
             
             // 2. Prepare Gemini Request
             val parts = mutableListOf<io.github.paulleung93.lobbylens.data.model.GeminiPart>()
@@ -716,19 +724,11 @@ class PoliticianRepository {
     }
     
     /**
-     * Helper function to convert Bitmap to base64 string
+     * Helper function to convert base64 string to Bitmap.
+     * Runs on Default dispatcher for CPU-intensive work.
      */
-    private fun bitmapToBase64(bitmap: Bitmap): String {
-        val outputStream = java.io.ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-        return android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP)
-    }
-    
-    /**
-     * Helper function to convert base64 string to Bitmap
-     */
-    private fun base64ToBitmap(base64: String): Bitmap? {
-        return try {
+    private suspend fun base64ToBitmap(base64: String): Bitmap? = withContext(Dispatchers.Default) {
+        try {
             val decodedBytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
             android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
         } catch (e: Exception) {

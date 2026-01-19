@@ -10,10 +10,11 @@ import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import kotlin.math.sqrt
 
 /**
  * A utility object containing helper functions for image manipulation,
@@ -22,23 +23,14 @@ import kotlin.math.sqrt
 object ImageUtils {
 
     /**
-     * Creates a composite image by overlaying company logos onto a base image.
-     *
-     * @param baseBitmap The original image of the politician.
-     * @param mask The selfie segmentation mask to identify the person.
-     * @param organizations A list of top contributing organizations (by employer) from the FEC API.
-     * @param logos A map of organization names to their downloaded logo bitmaps.
-     * @param faceBounds The bounding box of the detected face, to avoid drawing over it.
-     * @return A new bitmap with the data overlays.
-     */
-    /**
      * Converts a Bitmap to a Base64 encoded string (JPEG format).
+     * Runs on Default dispatcher for CPU-intensive work.
      */
-    fun bitmapToBase64(bitmap: Bitmap): String {
+    suspend fun bitmapToBase64(bitmap: Bitmap): String = withContext(Dispatchers.Default) {
         val outputStream = java.io.ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
         val byteArray = outputStream.toByteArray()
-        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
+        android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
     }
 
     fun saveImageToGallery(context: Context, bitmap: Bitmap, displayName: String): Uri? {
@@ -101,18 +93,19 @@ object ImageUtils {
     /**
      * Overlays a list of logo bitmaps onto the image.
      * Use Gemini-guided placement if available.
+     * Runs on Default dispatcher for CPU-intensive work.
      *
      * @param baseBitmap The original image.
      * @param logos The list of logo bitmaps to overlay.
      * @param placement Optional placement coordinates from Gemini.
      * @return A new Bitmap with the logos overlaid.
      */
-    fun overlayLogosOnImage(
+    suspend fun overlayLogosOnImage(
         baseBitmap: Bitmap, 
         logos: List<Bitmap>,
         placement: io.github.paulleung93.lobbylens.data.model.LogoPlacement? = null
-    ): Bitmap {
-        if (logos.isEmpty()) return baseBitmap
+    ): Bitmap = withContext(Dispatchers.Default) {
+        if (logos.isEmpty()) return@withContext baseBitmap
 
         val mutableBitmap = baseBitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(mutableBitmap)
@@ -160,6 +153,6 @@ object ImageUtils {
             currentX += targetSize + padding
         }
 
-        return mutableBitmap
+        mutableBitmap
     }
 }
