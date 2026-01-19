@@ -30,12 +30,12 @@ LobbyLens transforms complex political finance data into an intuitive, visual ex
 
 ## ✨ Features
 
-### 🤖 AI-Powered Recognition & Visualization
+### AI-Powered Recognition & Visualization
 - **Cloud Vision API Integration**: Accurate politician identification from photos
 - **Gemini 3 Pro Image**: Generative AI creates visual representations of campaign influence by adding donor logos to politician photos
 - **Real-time Processing**: Seamless pipeline from image capture to AI-generated visualization
 
-### 💵 Comprehensive Finance Data
+### Comprehensive Finance Data
 - **FEC Campaign Contributions**: Official Federal Election Commission data
   - Historical contribution trends across multiple election cycles
   - Detailed contributor information with amounts and types
@@ -44,18 +44,18 @@ LobbyLens transforms complex political finance data into an intuitive, visual ex
   - Gift and contribution reports from registered lobbyists
   - Direct influence tracking beyond traditional campaign donations
 
-### 📊 Interactive Data Exploration
+### Interactive Data Exploration
 - **Dual View Tabs**: Toggle between FEC contributions and lobbyist disclosures
 - **Historical Charts**: Visualize funding trends over time with interactive bar graphs
 - **Smart Filtering**: Search contributors by name, sort by amount
 - **Direct FEC Links**: Verify data with official source links
 
-### 🎯 Browse & Search
+### Browse & Search
 - **Congress Directory**: Browse all current members of Congress
 - **Advanced Search**: Find politicians by name, state, or party
 - **Detailed Profiles**: Complete campaign finance profiles for each politician
 
-### 💾 Save & Share
+### Save & Share
 - **Gallery Export**: Save AI-generated images to your device
 - **Social Sharing**: Share visualizations to raise awareness
 - **Toast Confirmations**: User-friendly feedback for all actions
@@ -64,16 +64,35 @@ LobbyLens transforms complex political finance data into an intuitive, visual ex
 
 ## 📱 Walkthrough
 
-> *Coming soon: Screenshots, GIFs, and videos showcasing politician identification, data visualization, and AI-generated images*
-
-<!-- 
-Add media here when available:
-![Home Screen](screenshots/home.png)
-![Editor Screen](screenshots/editor.png)
-![Details Screen](screenshots/details.png)
-![Generated Image](screenshots/generated.png)
-![Demo](screenshots/demo.gif)
--->
+<table>
+  <tr>
+    <td width="60%">
+      <h3>1. Snap & Reveal</h3>
+      <p>Capture a photo of any politician. The app instantly identifies them and overlays their top donor logos directly on their suit.</p>
+    </td>
+    <td width="40%">
+       <img src="gifs/feature_ai.gif" alt="AI Visualization" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="60%">
+      <h3>2. Dive into the Data</h3>
+      <p>Tap to explore the numbers. Toggle between campaign donations and lobbying reports, visualized in clear, interactive charts.</p>
+    </td>
+    <td width="40%">
+       <img src="gifs/feature_stats.gif" alt="Financial and Lobbying Data" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="60%">
+      <h3>3. Search the Directory</h3>
+      <p>Browse the full Congress database. Filter by state or party to uncover funding sources for any representative.</p>
+    </td>
+    <td width="40%">
+       <img src="gifs/feature_search.gif" alt="Search Directory" width="100%">
+    </td>
+  </tr>
+</table>
 
 ---
 
