@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import io.github.paulleung93.lobbylens.util.ImageUtils
 
@@ -36,7 +36,7 @@ import io.github.paulleung93.lobbylens.util.ImageUtils
 fun EditorScreen(
     navController: NavController,
     imageUri: String?,
-    viewModel: EditorViewModel = viewModel()
+    viewModel: EditorViewModel = hiltViewModel()
 ) {
     Log.d("EditorScreen", "EditorScreen: Composing with imageUri=$imageUri")
     val context = LocalContext.current

@@ -10,9 +10,13 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.paulleung93.lobbylens.data.model.FecCandidate
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
-import io.github.paulleung93.lobbylens.data.repository.PoliticianRepository
+import io.github.paulleung93.lobbylens.data.repository.ContributionRepository
+import io.github.paulleung93.lobbylens.data.repository.FecRepository
+import io.github.paulleung93.lobbylens.data.repository.ImageGenerationRepository
+import io.github.paulleung93.lobbylens.data.repository.VisionRepository
 import io.github.paulleung93.lobbylens.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,14 +27,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import javax.inject.Inject
 
 /**
  * ViewModel for the Editor screen, fully refactored for the FEC API.
  * Uses StateFlow and sealed UI state for structured state management.
  */
-class EditorViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = PoliticianRepository()
+@HiltViewModel
+class EditorViewModel @Inject constructor(
+    application: Application,
+    private val fecRepository: FecRepository,
+    private val visionRepository: VisionRepository,
+    private val imageGenRepository: ImageGenerationRepository,
+    private val contributionRepository: ContributionRepository
+) : AndroidViewModel(application) {
     
     companion object {
         private const val TAG = "EditorViewModel"
@@ -65,7 +75,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _uiState.value = EditorUiState.SearchResults(candidates = emptyList(), isLoading = true)
 
-            when (val result = repository.getCongressMembers(_selectedCycle.value)) {
+            when (val result = fecRepository.getCongressMembers(_selectedCycle.value)) {
                 is Result.Success -> {
                     Log.i(TAG, "loadCongressMembers: Success - found ${result.data.results.size} members")
                     _uiState.value = EditorUiState.SearchResults(candidates = result.data.results)
@@ -88,7 +98,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _uiState.value = EditorUiState.SearchResults(candidates = emptyList(), isLoading = true)
 
-            when (val result = repository.searchCandidatesByName(name)) {
+            when (val result = fecRepository.searchCandidatesByName(name)) {
                 is Result.Success -> {
                     Log.i(TAG, "searchCandidatesByName: Success - found ${result.data.results.size} candidates")
                     _uiState.value = EditorUiState.SearchResults(candidates = result.data.results)
@@ -141,7 +151,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         Log.d(TAG, "identifyPolitician: Starting identification")
         _uiState.value = EditorUiState.Identifying
         
-        when (val result = repository.identifyPolitician(bitmap)) {
+        when (val result = visionRepository.identifyPolitician(bitmap)) {
             is Result.Success -> {
                 val candidate = result.data
                 Log.i(TAG, "identifyPolitician: Success - identified ${candidate.name} (${candidate.candidateId})")
@@ -165,7 +175,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
         // Step 1: Fetch Candidate Committee History to get a valid Principal Committee ID
         var committeeId: String? = null
-        when (val historyResult = repository.getCandidateCommitteeHistory(cid)) {
+        when (val historyResult = fecRepository.getCandidateCommitteeHistory(cid)) {
             is Result.Success -> {
                 val historySorted = historyResult.data.results.sortedByDescending { it.cycle }
                 val principalCommittee = historySorted.firstOrNull { it.designation == "P" }
@@ -190,7 +200,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         // Step 2: Fetch Contribution Data using the resolved Committee ID
-        when (val result = repository.getTopOrganizations(committeeId, cycle)) {
+        when (val result = contributionRepository.getTopOrganizations(committeeId, cycle)) {
             is Result.Success -> {
                 val organizations = result.data.results
                 Log.i(TAG, "fetchTopOrganizations: Success - found ${organizations.size} organizations")
@@ -237,7 +247,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
 
-        when (val result = repository.generatePoliticianImage(originalBitmap, companies)) {
+        when (val result = imageGenRepository.generatePoliticianImage(originalBitmap, companies)) {
             is Result.Success -> {
                 Log.i(TAG, "generateImage: Success - image generated")
                 _uiState.value = EditorUiState.ImageProcessingSuccess(

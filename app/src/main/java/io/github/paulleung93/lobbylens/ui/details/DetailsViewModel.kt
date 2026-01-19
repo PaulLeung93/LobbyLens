@@ -3,8 +3,11 @@ package io.github.paulleung93.lobbylens.ui.details
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
-import io.github.paulleung93.lobbylens.data.repository.PoliticianRepository
+import io.github.paulleung93.lobbylens.data.repository.ContributionRepository
+import io.github.paulleung93.lobbylens.data.repository.FecRepository
+import io.github.paulleung93.lobbylens.data.repository.SenateRepository
 import io.github.paulleung93.lobbylens.util.Result
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 enum class DetailsViewType {
     CAMPAIGN, LOBBYIST
@@ -30,9 +34,12 @@ enum class CampaignSortOption {
  * ViewModel for the Details screen.
  * Uses StateFlow and sealed UI state for structured state management.
  */
-class DetailsViewModel : ViewModel() {
-
-    private val repository = PoliticianRepository()
+@HiltViewModel
+class DetailsViewModel @Inject constructor(
+    private val fecRepository: FecRepository,
+    private val contributionRepository: ContributionRepository,
+    private val senateRepository: SenateRepository
+) : ViewModel() {
     
     companion object {
         private const val TAG = "DetailsViewModel"
@@ -88,7 +95,7 @@ class DetailsViewModel : ViewModel() {
             var candidateName: String? = null
             var candidateObj: io.github.paulleung93.lobbylens.data.model.FecCandidate? = null
 
-            when (val historyResult = repository.getCandidateCommitteeHistory(cid)) {
+            when (val historyResult = fecRepository.getCandidateCommitteeHistory(cid)) {
                 is Result.Success -> {
                     val historySorted = historyResult.data.results.sortedByDescending { it.cycle }
                     val principalCommittee = historySorted.firstOrNull { it.designation == "P" }
@@ -113,7 +120,7 @@ class DetailsViewModel : ViewModel() {
             }
 
             // Get candidate details for name
-            when (val candidateResult = repository.getCandidateDetails(cid)) {
+            when (val candidateResult = fecRepository.getCandidateDetails(cid)) {
                 is Result.Success -> {
                     candidateObj = candidateResult.data.results.firstOrNull()
                     candidateName = candidateObj?.name
@@ -134,7 +141,7 @@ class DetailsViewModel : ViewModel() {
             val deferredResults = cycles.map { cycle ->
                 async {
                     Log.d(TAG, "fetchHistoricalData: Launching fetch for cycle $cycle")
-                    when (val result = repository.getTopOrganizations(committeeId, cycle)) {
+                    when (val result = contributionRepository.getTopOrganizations(committeeId, cycle)) {
                         is Result.Success -> {
                             Log.d(TAG, "fetchHistoricalData: Success for cycle $cycle - ${result.data.results.size} organizations")
                             cycle to result.data.results
@@ -186,7 +193,7 @@ class DetailsViewModel : ViewModel() {
     private suspend fun fetchSenateData(name: String) {
         Log.d(TAG, "fetchSenateData: Fetching for $name")
         
-        when (val result = repository.getSenateContributions(name)) {
+        when (val result = senateRepository.getContributions(name)) {
             is Result.Success -> {
                 Log.d(TAG, "fetchSenateData: Success, found ${result.data.results.size} reports")
                 val currentState = _uiState.value
