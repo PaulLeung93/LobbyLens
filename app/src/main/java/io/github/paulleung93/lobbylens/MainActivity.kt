@@ -11,9 +11,11 @@ import androidx.compose.ui.Modifier
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import dagger.hilt.android.AndroidEntryPoint
 import io.github.paulleung93.lobbylens.ui.navigation.AppNavigation
 import io.github.paulleung93.lobbylens.ui.theme.LobbyLensTheme
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,3 +37,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

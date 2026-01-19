@@ -20,9 +20,9 @@ object RetrofitInstance {
      * This is the standard way to handle API key authentication with Retrofit.
      */
     private val fecHttpClient = OkHttpClient.Builder()
-        .connectTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .addInterceptor { chain ->
             val original = chain.request()
             val originalHttpUrl = original.url
@@ -70,7 +70,7 @@ object RetrofitInstance {
         appContext = context.applicationContext
         packageName = context.packageName
         signatureDigest = io.github.paulleung93.lobbylens.util.SignatureUtils.getSignature(context)
-        android.util.Log.d("RetrofitInstance", "Initialized with package: $packageName, signature: $signatureDigest")
+      
     }
 
     /**
@@ -79,22 +79,24 @@ object RetrofitInstance {
     fun getHeaderInfo(): String = "pkg=$packageName, sig=${signatureDigest?.take(10)}..."
 
     private fun getCloudClient(): OkHttpClient {
-        return OkHttpClient.Builder().addInterceptor { chain ->
-            val original = chain.request()
-            val builder = original.newBuilder()
-            
-            // Add Android restriction headers if available
-            android.util.Log.d("RetrofitInstance", "Interceptor: Package=$packageName, Signature=$signatureDigest")
+        return OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val builder = original.newBuilder()
 
-            packageName?.let {
-                builder.addHeader("X-Android-Package", it)
-            }
-            signatureDigest?.let {
-                builder.addHeader("X-Android-Cert", it)
-            }
+                // Add Android restriction headers if available
+                packageName?.let {
+                    builder.addHeader("X-Android-Package", it)
+                }
+                signatureDigest?.let {
+                    builder.addHeader("X-Android-Cert", it)
+                }
 
-            chain.proceed(builder.build())
-        }.build()
+                chain.proceed(builder.build())
+            }.build()
     }
 
     val cloudVisionApi: CloudVisionService by lazy {
@@ -119,11 +121,16 @@ object RetrofitInstance {
 
     private val geminiHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)  // 5 minutes
-        .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-        .addInterceptor(okhttp3.logging.HttpLoggingInterceptor().apply {
-            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
-        })
+        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)  // 2 minutes for AI generation
+        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .apply {
+            // Only add logging interceptor in debug builds to prevent leaking sensitive data
+            if (io.github.paulleung93.lobbylens.BuildConfig.DEBUG) {
+                addInterceptor(okhttp3.logging.HttpLoggingInterceptor().apply {
+                    level = okhttp3.logging.HttpLoggingInterceptor.Level.BASIC // Use BASIC instead of BODY to avoid logging full requests
+                })
+            }
+        }
         .build()
 
     val geminiApi: GeminiApiService by lazy {

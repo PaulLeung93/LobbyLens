@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="io.github.paulleung93.lobbylens" />
+                  <option name="mobileSdkAppId" value="1:215134873062:android:29ec09a4cab2d1b088e227" />
+                  <option name="projectId" value="lobbylens-4f8ce" />
+                  <option name="projectNumber" value="215134873062" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
