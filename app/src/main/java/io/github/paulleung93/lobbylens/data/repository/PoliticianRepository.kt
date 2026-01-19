@@ -266,11 +266,16 @@ class PoliticianRepository {
                     rawList.filter { it.contributorName != null } // Safety filter
                         .groupBy { it.contributorName ?: "Unknown PAC" }
                         .map { (name, items) ->
+                            // Find the most recent date
+                            val uniqueDates = items.mapNotNull { it.contributionReceiptDate }
+                            val latestDate = uniqueDates.maxOrNull() // format is typically YYYY-MM-DD or similar ISO/FEC format
+                            
                             io.github.paulleung93.lobbylens.data.model.FecEmployerContribution(
                                 employer = name,
                                 total = items.sumOf { it.amount },
                                 count = items.size,
-                                type = "PAC"
+                                type = "PAC",
+                                mostRecentDate = latestDate
                             )
                         }
                 } else {

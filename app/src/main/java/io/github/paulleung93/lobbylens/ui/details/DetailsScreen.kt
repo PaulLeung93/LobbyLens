@@ -643,6 +643,8 @@ fun LobbyistContributionCard(
     }
 }
 
+
+
 @Composable
 fun ContributorItem(
     organization: io.github.paulleung93.lobbylens.data.model.FecEmployerContribution,
@@ -695,6 +697,16 @@ fun ContributorItem(
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                         fontWeight = FontWeight.Medium
                     )
+                    
+                    // Display Most Recent Date if available
+                    if (organization.mostRecentDate != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Last: ${organization.mostRecentDate}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
             Text(
@@ -711,7 +723,14 @@ fun ContributorItem(
             androidx.compose.material3.TextButton(
                 onClick = {
                     val encodedName = android.net.Uri.encode(organization.employer)
-                    val url = "https://www.fec.gov/data/receipts/?committee_id=$committeeId&contributor_name=$encodedName&two_year_transaction_period=$cycle"
+                    // Use contributor_employer for Employers, contributor_name for PACs (or others)
+                    // "Employer" type is manually set for the aggregated by_employer endpoint.
+                    val paramName = if (organization.type.equals("Employer", ignoreCase = true)) {
+                        "contributor_employer"
+                    } else {
+                        "contributor_name"
+                    }
+                    val url = "https://www.fec.gov/data/receipts/?committee_id=$committeeId&$paramName=$encodedName&two_year_transaction_period=$cycle"
                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                     context.startActivity(intent)
                 },

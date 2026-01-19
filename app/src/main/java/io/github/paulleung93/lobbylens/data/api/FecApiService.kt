@@ -93,7 +93,7 @@ interface FecApiService {
     suspend fun getPacContributions(
         @Query("api_key") apiKey: String = BuildConfig.FEC_API_KEY,
         @Query("committee_id") committeeId: String,
-        @Query("cycle") cycle: String,
+        @Query("two_year_transaction_period") cycle: String,
         @Query("is_individual") isIndividual: Boolean = false,
         @Query("sort") sort: String = "-contribution_receipt_amount",
         @Query("per_page") perPage: Int = 50

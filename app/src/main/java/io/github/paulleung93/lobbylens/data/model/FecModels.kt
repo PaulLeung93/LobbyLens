@@ -131,7 +131,9 @@ data class FecEmployerContribution(
 
     // Not from API, but populated manually by repository to differentiate source type.
     // "Employer" or "PAC"
-    var type: String = "Employer"
+    var type: String = "Employer",
+
+    var mostRecentDate: String? = null
 )
 
 /**
@@ -150,7 +152,10 @@ data class FecScheduleA(
     val amount: Double,
     
     @SerializedName("entity_type")
-    val entityType: String?
+    val entityType: String?,
+    
+    @SerializedName("contribution_receipt_date")
+    val contributionReceiptDate: String?
 )
 
 /**
