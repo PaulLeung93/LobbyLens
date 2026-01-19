@@ -33,6 +33,9 @@ data class FecCandidate(
     @SerializedName("party")
     val party: String?,
 
+    @SerializedName("election_years")
+    val electionYears: List<Int>? = null,
+
     @SerializedName("principal_committees")
     val principalCommittees: List<FecCommittee>? = null,
 

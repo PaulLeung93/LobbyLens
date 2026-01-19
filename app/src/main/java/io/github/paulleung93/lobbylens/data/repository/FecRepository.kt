@@ -48,7 +48,7 @@ class FecRepository @Inject constructor(
         val allCandidates = mutableListOf<FecCandidate>()
         var page = 1
         var hasMorePages = true
-        val maxPages = 10
+        val maxPages = 3
 
         try {
             while (hasMorePages && page <= maxPages) {
@@ -204,7 +204,8 @@ class FecRepository @Inject constructor(
             name = name,
             party = party,
             state = state,
-            officeSought = office
+            officeSought = office,
+            electionYears = electionYears?.split(",")?.mapNotNull { it.toIntOrNull() }
         )
     }
 
@@ -215,7 +216,7 @@ class FecRepository @Inject constructor(
             party = party,
             state = state,
             office = officeSought,
-            electionYears = null
+            electionYears = electionYears?.joinToString(",")
         )
     }
 }
