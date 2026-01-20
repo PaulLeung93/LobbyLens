@@ -23,14 +23,51 @@ import java.io.IOException
 object ImageUtils {
 
     /**
+     * Resizes a bitmap if its dimensions exceed the maxLength.
+     * Maintains aspect ratio.
+     */
+    fun resizeBitmap(source: Bitmap, maxLength: Int): Bitmap {
+        if (source.width <= maxLength && source.height <= maxLength) return source
+        val aspectRatio = source.width.toDouble() / source.height.toDouble()
+        val targetWidth = if (aspectRatio >= 1) maxLength else (maxLength * aspectRatio).toInt()
+        val targetHeight = if (aspectRatio < 1) maxLength else (maxLength / aspectRatio).toInt()
+        return Bitmap.createScaledBitmap(source, targetWidth, targetHeight, true)
+    }
+
+    /**
      * Converts a Bitmap to a Base64 encoded string (JPEG format).
+     * Automatically resizes the image to max 1024px dimension to save memory and bandwidth.
      * Runs on Default dispatcher for CPU-intensive work.
      */
     suspend fun bitmapToBase64(bitmap: Bitmap): String = withContext(Dispatchers.Default) {
+        // Resize to max 1024px dimension
+        val resized = resizeBitmap(bitmap, 1024)
         val outputStream = java.io.ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+        // Compress at 80% quality
+        resized.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
         val byteArray = outputStream.toByteArray()
         android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
+    }
+
+    /**
+     * Saves a bitmap to the application cache directory.
+     * Returns the absolute path URI string.
+     */
+    fun saveBitmapToCache(context: Context, bitmap: Bitmap, fileName: String): String {
+        val cachePath = File(context.cacheDir, "images")
+        cachePath.mkdirs()
+        val file = File(cachePath, "$fileName.jpg")
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+        return Helper.getUriForFile(file)
+    }
+
+    // Helper to get consistent URI string
+    private object Helper {
+        fun getUriForFile(file: File): String {
+            return Uri.fromFile(file).toString()
+        }
     }
 
     fun saveImageToGallery(context: Context, bitmap: Bitmap, displayName: String): Uri? {

@@ -102,6 +102,21 @@ object NetworkModule {
             .build()
     }
 
+    /**
+     * Provides an OkHttpClient configured for Senate LDA API.
+     * Increased timeouts for potentially slow/large responses.
+     */
+    @Provides
+    @Singleton
+    @Named("SenateClient")
+    fun provideSenateHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build()
+    }
+
     @Provides
     @Singleton
     fun provideFecApiService(@Named("FecClient") client: OkHttpClient): FecApiService {
@@ -137,9 +152,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideSenateLdaApiService(): SenateLdaApiService {
+    fun provideSenateLdaApiService(@Named("SenateClient") client: OkHttpClient): SenateLdaApiService {
         return Retrofit.Builder()
             .baseUrl(SENATE_LDA_BASE_URL)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(SenateLdaApiService::class.java)

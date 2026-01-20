@@ -112,17 +112,25 @@ class EditorViewModel @Inject constructor(
         }
     }
 
+
     /**
      * Processes the image URI on a background thread to decode the bitmap.
      */
-    fun processImage(uri: String, context: Context) {
+    fun processImage(uri: String) {
+        val context = getApplication<Application>()
         Log.d(TAG, "processImage: Starting image processing for URI")
         viewModelScope.launch {
             _uiState.value = EditorUiState.LoadingImage
             
             try {
                 val bitmap = withContext(Dispatchers.IO) {
-                    val decodedUri = URLDecoder.decode(uri, StandardCharsets.UTF_8.toString())
+                    val decodedUri = try {
+                         URLDecoder.decode(uri, StandardCharsets.UTF_8.toString())
+                    } catch (e: Exception) {
+                         Log.e(TAG, "processImage: URL decoding failed, using raw uri", e)
+                         uri
+                    }
+                    
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(decodedUri)))
                     } else {

@@ -56,7 +56,7 @@ fun EditorScreen(
     // Trigger image processing when imageUri is present
     LaunchedEffect(imageUri) {
         if (imageUri != null && uiState is EditorUiState.Initial) {
-            viewModel.processImage(imageUri, context)
+            viewModel.processImage(imageUri)
         }
     }
 
