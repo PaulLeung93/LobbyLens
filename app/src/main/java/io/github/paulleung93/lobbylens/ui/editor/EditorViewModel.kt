@@ -60,7 +60,7 @@ class EditorViewModel @Inject constructor(
 
     // Internal storage for intermediate processing data
     private var currentCandidate: FecCandidate? = null
-    private var currentBitmap: Bitmap? = null
+    private var currentImageUri: String? = null
     private var currentOrganizations: List<FecEmployerContribution> = emptyList()
 
     fun updateSearchQuery(query: String) {
@@ -94,6 +94,12 @@ class EditorViewModel @Inject constructor(
      * @param name The name of the politician to search for.
      */
     fun searchCandidatesByName(name: String) {
+        // Validate: don't search with empty query
+        if (name.isBlank()) {
+            _uiState.value = EditorUiState.Error("Please enter a candidate name to search.")
+            return
+        }
+        
         Log.d(TAG, "searchCandidatesByName: Searching for '$name'")
         viewModelScope.launch {
             _uiState.value = EditorUiState.SearchResults(candidates = emptyList(), isLoading = true)
@@ -112,7 +118,6 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-
     /**
      * Processes the image URI on a background thread to decode the bitmap.
      */
@@ -123,7 +128,7 @@ class EditorViewModel @Inject constructor(
             _uiState.value = EditorUiState.LoadingImage
             
             try {
-                val bitmap = withContext(Dispatchers.IO) {
+                val (savedUri, bitmap) = withContext(Dispatchers.IO) {
                     val decodedUri = try {
                          URLDecoder.decode(uri, StandardCharsets.UTF_8.toString())
                     } catch (e: Exception) {
@@ -131,16 +136,26 @@ class EditorViewModel @Inject constructor(
                          uri
                     }
                     
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val originalBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(decodedUri)))
                     } else {
                         @Suppress("DEPRECATION")
                         MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(decodedUri))
                     }.copy(Bitmap.Config.ARGB_8888, true)
+                    
+                    // Resize if needed and save to cache
+                    val resized = io.github.paulleung93.lobbylens.util.ImageUtils.resizeBitmap(originalBitmap, 2048)
+                    val cacheUri = io.github.paulleung93.lobbylens.util.ImageUtils.saveBitmapToCache(
+                        context, resized, "original_${System.currentTimeMillis()}"
+                    )
+                    
+                    if (originalBitmap != resized) originalBitmap.recycle()
+                    
+                    Pair(cacheUri, resized)
                 }
                 
-                currentBitmap = bitmap
-                Log.d(TAG, "processImage: Bitmap decoded, size: ${bitmap.width}x${bitmap.height}")
+                currentImageUri = savedUri
+                Log.d(TAG, "processImage: Bitmap saved to cache: $savedUri")
                 
                 // Trigger Identification immediately after loading
                 identifyPolitician(bitmap)
@@ -215,14 +230,14 @@ class EditorViewModel @Inject constructor(
                 currentOrganizations = organizations
                 
                 // Trigger image generation if we have organizations
-                if (organizations.isNotEmpty() && currentBitmap != null) {
-                    generateImage(currentBitmap!!)
+                if (organizations.isNotEmpty() && currentImageUri != null) {
+                    generateImage()
                 } else {
                     // No organizations, show success with no generated image
                     _uiState.value = EditorUiState.ImageProcessingSuccess(
                         candidate = currentCandidate!!,
-                        originalBitmap = currentBitmap!!,
-                        generatedImage = null,
+                        originalImageUri = currentImageUri!!,
+                        generatedImageUri = null,
                         organizations = organizations
                     )
                 }
@@ -238,9 +253,12 @@ class EditorViewModel @Inject constructor(
     /**
      * Generates the final image using Vertex AI.
      */
-    private suspend fun generateImage(originalBitmap: Bitmap) {
+    private suspend fun generateImage() {
         Log.d(TAG, "generateImage: Starting image generation")
         _uiState.value = EditorUiState.GeneratingVisualization
+        
+        val context = getApplication<Application>()
+        val uri = currentImageUri ?: return
         
         val companies = currentOrganizations.map { it.employer }.take(5)
         Log.d(TAG, "generateImage: Using top ${companies.size} companies: $companies")
@@ -248,34 +266,61 @@ class EditorViewModel @Inject constructor(
         if (companies.isEmpty()) {
             _uiState.value = EditorUiState.ImageProcessingSuccess(
                 candidate = currentCandidate!!,
-                originalBitmap = originalBitmap,
-                generatedImage = null,
+                originalImageUri = uri,
+                generatedImageUri = null,
                 organizations = currentOrganizations
             )
             return
         }
 
-        when (val result = imageGenRepository.generatePoliticianImage(originalBitmap, companies)) {
-            is Result.Success -> {
-                Log.i(TAG, "generateImage: Success - image generated")
+        withContext(Dispatchers.IO) {
+            try {
+                // Load bitmap from cache for generation
+                val loadedBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(uri)))
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(uri))
+                }.copy(Bitmap.Config.ARGB_8888, true)
+                
+                val resized = io.github.paulleung93.lobbylens.util.ImageUtils.resizeBitmap(loadedBitmap, 1024)
+                if (loadedBitmap != resized) loadedBitmap.recycle()
+
+                when (val result = imageGenRepository.generatePoliticianImage(resized, companies)) {
+                    is Result.Success -> {
+                        Log.i(TAG, "generateImage: Success - image generated")
+                        // Save generated image to cache
+                        val generatedUri = io.github.paulleung93.lobbylens.util.ImageUtils.saveBitmapToCache(
+                            context, result.data, "generated_${System.currentTimeMillis()}"
+                        )
+                        
+                        _uiState.value = EditorUiState.ImageProcessingSuccess(
+                            candidate = currentCandidate!!,
+                            originalImageUri = uri,
+                            generatedImageUri = generatedUri,
+                            organizations = currentOrganizations
+                        )
+                    }
+                    is Result.Error -> {
+                        Log.e(TAG, "generateImage: Error - ${result.exception.message}", result.exception)
+                        _uiState.value = EditorUiState.ImageProcessingSuccess(
+                            candidate = currentCandidate!!,
+                            originalImageUri = uri,
+                            generatedImageUri = null,
+                            organizations = currentOrganizations
+                        )
+                    }
+                    else -> {}
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "generateImage: Failed during generation", e)
                 _uiState.value = EditorUiState.ImageProcessingSuccess(
                     candidate = currentCandidate!!,
-                    originalBitmap = originalBitmap,
-                    generatedImage = result.data,
+                    originalImageUri = uri,
+                    generatedImageUri = null,
                     organizations = currentOrganizations
                 )
             }
-            is Result.Error -> {
-                Log.e(TAG, "generateImage: Error - ${result.exception.message}", result.exception)
-                // Even on generation error, show success with original image
-                _uiState.value = EditorUiState.ImageProcessingSuccess(
-                    candidate = currentCandidate!!,
-                    originalBitmap = originalBitmap,
-                    generatedImage = null,
-                    organizations = currentOrganizations
-                )
-            }
-            else -> {}
         }
     }
 
@@ -285,7 +330,7 @@ class EditorViewModel @Inject constructor(
     fun resetState() {
         _uiState.value = EditorUiState.Initial
         currentCandidate = null
-        currentBitmap = null
+        currentImageUri = null
         currentOrganizations = emptyList()
     }
 }

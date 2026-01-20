@@ -30,6 +30,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import io.github.paulleung93.lobbylens.util.ImageUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +132,11 @@ private fun ImageProcessingContent(
             }
             
             is EditorUiState.ImageProcessingSuccess -> {
-                val displayBitmap = uiState.generatedImage ?: uiState.originalBitmap
+                // Determine which URI to display
+                val displayUri = uiState.generatedImageUri ?: uiState.originalImageUri
+                
+                // Load bitmap from URI
+                val displayBitmap = rememberBitmapFromUri(displayUri)
                 
                 HeaderSection(
                     title = uiState.candidate.name.uppercase(),
@@ -145,21 +151,27 @@ private fun ImageProcessingContent(
                         .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        bitmap = displayBitmap.asImageBitmap(),
-                        contentDescription = "Processed Image",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                    )
+                    if (displayBitmap != null) {
+                        Image(
+                            bitmap = displayBitmap.asImageBitmap(),
+                            contentDescription = "Processed Image",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                        )
+                    } else {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                    }
                 }
                 
-                ActionButtons(
-                    displayBitmap = displayBitmap,
-                    candidateId = uiState.candidate.candidateId,
-                    context = context,
-                    navController = navController
-                )
+                if (displayBitmap != null) {
+                    ActionButtons(
+                        displayBitmap = displayBitmap,
+                        candidateId = uiState.candidate.candidateId,
+                        context = context,
+                        navController = navController
+                    )
+                }
             }
             
             is EditorUiState.Error -> {
@@ -428,4 +440,36 @@ private fun ActionButtons(
         Spacer(Modifier.width(8.dp))
         Text("VIEW FULL RECORD", style = MaterialTheme.typography.titleMedium)
     }
+}
+
+/**
+ * Composable helper to load a Bitmap from a URI string asynchronously.
+ */
+@Composable
+private fun rememberBitmapFromUri(uri: String?): android.graphics.Bitmap? {
+    var bitmap by remember(uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    val context = LocalContext.current
+    
+    LaunchedEffect(uri) {
+        if (uri != null) {
+            bitmap = withContext(Dispatchers.IO) {
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        android.graphics.ImageDecoder.decodeBitmap(
+                            android.graphics.ImageDecoder.createSource(context.contentResolver, android.net.Uri.parse(uri))
+                        )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, android.net.Uri.parse(uri))
+                    }.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                } catch (e: Exception) {
+                    Log.e("EditorScreen", "Failed to load bitmap from URI: $uri", e)
+                    null
+                }
+            }
+        } else {
+            bitmap = null
+        }
+    }
+    return bitmap
 }

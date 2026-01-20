@@ -1,6 +1,5 @@
 package io.github.paulleung93.lobbylens.ui.editor
 
-import android.graphics.Bitmap
 import io.github.paulleung93.lobbylens.data.model.FecCandidate
 import io.github.paulleung93.lobbylens.data.model.FecEmployerContribution
 
@@ -30,11 +29,12 @@ sealed interface EditorUiState {
 
     /**
      * Successful image processing result.
+     * Uses URI strings instead of Bitmaps to prevent OOM during configuration changes.
      */
     data class ImageProcessingSuccess(
         val candidate: FecCandidate,
-        val originalBitmap: Bitmap,
-        val generatedImage: Bitmap?,
+        val originalImageUri: String,
+        val generatedImageUri: String?,
         val organizations: List<FecEmployerContribution>
     ) : EditorUiState
 
