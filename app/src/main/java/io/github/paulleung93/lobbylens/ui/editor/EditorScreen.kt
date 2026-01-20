@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.compose.ui.res.stringResource
+import io.github.paulleung93.lobbylens.R
 import io.github.paulleung93.lobbylens.util.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -93,7 +95,7 @@ fun EditorScreen(
                 .align(Alignment.TopStart)
                 .padding(top = 48.dp, start = 16.dp)
         ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
+            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(id = R.string.back_desc), tint = MaterialTheme.colorScheme.onBackground)
         }
     }
 }
@@ -114,20 +116,20 @@ private fun ImageProcessingContent(
         when (uiState) {
             is EditorUiState.Initial,
             is EditorUiState.LoadingImage -> {
-                HeaderSection(title = "LOADING IMAGE", subtitle = null)
-                StatusText("Loading image...")
+                HeaderSection(title = stringResource(id = R.string.loading_image_title), subtitle = null)
+                StatusText(stringResource(id = R.string.loading_image_status))
                 LoadingImagePlaceholder()
             }
             
             is EditorUiState.Identifying -> {
-                HeaderSection(title = "ANALYZING CANDIDATE", subtitle = null)
-                StatusText("Identifying...")
+                HeaderSection(title = stringResource(id = R.string.analyzing_candidate_title), subtitle = null)
+                StatusText(stringResource(id = R.string.identifying_status))
                 LoadingImagePlaceholder()
             }
             
             is EditorUiState.GeneratingVisualization -> {
-                HeaderSection(title = "ANALYZING CANDIDATE", subtitle = null)
-                StatusText("Generating Visualization...")
+                HeaderSection(title = stringResource(id = R.string.analyzing_candidate_title), subtitle = null)
+                StatusText(stringResource(id = R.string.generating_visualization_status))
                 LoadingImagePlaceholder()
             }
             
@@ -140,9 +142,9 @@ private fun ImageProcessingContent(
                 
                 HeaderSection(
                     title = uiState.candidate.name.uppercase(),
-                    subtitle = "${uiState.candidate.party ?: "Unspecified"} • ${uiState.candidate.state ?: "Unknown State"}"
+                    subtitle = "${uiState.candidate.party ?: stringResource(id = R.string.unspecified_party)} • ${uiState.candidate.state ?: stringResource(id = R.string.unknown_state)}"
                 )
-                StatusText("Done!")
+                StatusText(stringResource(id = R.string.done_status))
                 
                 Box(
                     modifier = Modifier
@@ -154,7 +156,7 @@ private fun ImageProcessingContent(
                     if (displayBitmap != null) {
                         Image(
                             bitmap = displayBitmap.asImageBitmap(),
-                            contentDescription = "Processed Image",
+                            contentDescription = stringResource(id = R.string.processed_image_desc),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(8.dp)
@@ -212,7 +214,7 @@ private fun SearchContent(
     ) {
         // Header
         Text(
-            text = "SEARCH ARCHIVES",
+            text = stringResource(id = R.string.search_archives_title),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
             letterSpacing = 2.sp,
@@ -222,7 +224,7 @@ private fun SearchContent(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Find financial records by name.",
+            text = stringResource(id = R.string.search_archives_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
@@ -233,7 +235,7 @@ private fun SearchContent(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
-            label = { Text("Candidate Name") },
+            label = { Text(stringResource(id = R.string.candidate_name_label)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -244,7 +246,7 @@ private fun SearchContent(
             ),
             trailingIcon = {
                 IconButton(onClick = onSearch) {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
+                    Icon(Icons.Default.Search, contentDescription = stringResource(id = R.string.search_desc))
                 }
             },
             singleLine = true
@@ -261,7 +263,7 @@ private fun SearchContent(
             ),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("BROWSE CURRENT MEMBERS", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(id = R.string.browse_members), style = MaterialTheme.typography.titleMedium)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -276,7 +278,7 @@ private fun SearchContent(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text("SEARCH", style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.sp))
+            Text(stringResource(id = R.string.search), style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.sp))
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -329,7 +331,7 @@ private fun SearchContent(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "${candidate.party ?: "N/A"} • ${candidate.state ?: "N/A"} • ID: ${candidate.candidateId}",
+                                text = "${candidate.party ?: stringResource(id = R.string.na)} • ${candidate.state ?: stringResource(id = R.string.na)} • ID: ${candidate.candidateId}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
@@ -399,7 +401,7 @@ private fun ActionButtons(
         Button(
             onClick = {
                 ImageUtils.saveImageToGallery(context, displayBitmap, "LobbyLens_Image")
-                android.widget.Toast.makeText(context, "Image Saved to Gallery", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.image_saved_toast), android.widget.Toast.LENGTH_SHORT).show()
             },
             modifier = Modifier.weight(1f),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -408,7 +410,7 @@ private fun ActionButtons(
         ) {
             Icon(Icons.Default.Save, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
             Spacer(Modifier.width(8.dp))
-            Text("Save", color = MaterialTheme.colorScheme.secondary)
+            Text(stringResource(id = R.string.save), color = MaterialTheme.colorScheme.secondary)
         }
 
         // Share Button
@@ -424,7 +426,7 @@ private fun ActionButtons(
         ) {
             Icon(Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
             Spacer(Modifier.width(8.dp))
-            Text("Share", color = MaterialTheme.colorScheme.secondary)
+            Text(stringResource(id = R.string.share), color = MaterialTheme.colorScheme.secondary)
         }
     }
     
@@ -438,7 +440,7 @@ private fun ActionButtons(
     ) {
         Icon(Icons.Default.Info, contentDescription = null)
         Spacer(Modifier.width(8.dp))
-        Text("VIEW FULL RECORD", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(id = R.string.view_full_record), style = MaterialTheme.typography.titleMedium)
     }
 }
 

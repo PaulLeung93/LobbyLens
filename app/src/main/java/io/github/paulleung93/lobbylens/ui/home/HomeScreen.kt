@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -126,7 +127,7 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 // App Logo and Title - Centered visually by stacking
                 Icon(
                     painter = painterResource(id = R.drawable.ic_logo),
-                    contentDescription = "LobbyLens Logo",
+                    contentDescription = stringResource(id = R.string.app_logo_desc),
                     modifier = Modifier.size(80.dp),
                     tint = MaterialTheme.colorScheme.secondary // Gold Accent
                 )
@@ -134,14 +135,14 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "LOBBYLENS",
+                    text = stringResource(id = R.string.app_name_upper),
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     letterSpacing = 2.sp
                 )
                 
                 Text(
-                    text = "Transparency in your pocket.",
+                    text = stringResource(id = R.string.app_tagline),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                     modifier = Modifier.padding(top = 8.dp)
@@ -173,12 +174,12 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = "Take Photo",
+                        contentDescription = stringResource(id = R.string.take_photo_desc),
                         tint = MaterialTheme.colorScheme.secondary
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "SCAN CANDIDATE",
+                        stringResource(id = R.string.scan_candidate),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -202,13 +203,14 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Collections,
-                        contentDescription = "Select from Gallery",
+                        contentDescription = stringResource(id = R.string.select_gallery_desc),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "UPLOAD PHOTO",
+                        stringResource(id = R.string.upload_photo),
                         style = MaterialTheme.typography.titleLarge
+
                     )
                 }
             }
@@ -232,12 +234,12 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Search Icon",
+                        contentDescription = stringResource(id = R.string.search_icon_desc),
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Search database manually...",
+                        text = stringResource(id = R.string.search_manual_hint),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         style = MaterialTheme.typography.bodyLarge
                     )

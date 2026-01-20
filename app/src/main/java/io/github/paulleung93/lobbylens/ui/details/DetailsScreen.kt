@@ -41,6 +41,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.ui.res.stringResource
+import io.github.paulleung93.lobbylens.R
 
 
 @Composable
@@ -73,7 +75,7 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(id = R.string.back_desc),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -81,12 +83,12 @@ fun DetailsScreen(navController: NavController, cid: String?, viewModel: Details
                 Spacer(modifier = Modifier.width(8.dp))
                 
                 val headerText = when (uiState) {
-                    is DetailsUiState.Loading -> "Loading..."
+                    is DetailsUiState.Loading -> stringResource(id = R.string.loading)
                     is DetailsUiState.Success -> {
                         val candidate = (uiState as DetailsUiState.Success).candidate
-                        "${normalizeName(candidate.name)} (${candidate.party ?: "N/A"}-${candidate.state ?: "N/A"})"
+                        "${normalizeName(candidate.name)} (${candidate.party ?: stringResource(id = R.string.na)}-${candidate.state ?: stringResource(id = R.string.na)})"
                     }
-                    is DetailsUiState.Error -> "Details"
+                    is DetailsUiState.Error -> stringResource(id = R.string.details_default_title)
                 }
                 
                 Text(
@@ -152,7 +154,7 @@ private fun DetailsSuccessContent(
             onClick = { viewModel.updateViewType(DetailsViewType.LOBBYIST) },
             text = { 
                 Text(
-                    "Lobbyist Disclosures",
+                    stringResource(id = R.string.tab_lobbyist),
                     fontWeight = if (filterState.selectedView == DetailsViewType.LOBBYIST) FontWeight.Bold else FontWeight.Normal,
                     color = if (filterState.selectedView == DetailsViewType.LOBBYIST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 ) 
@@ -163,7 +165,7 @@ private fun DetailsSuccessContent(
             onClick = { viewModel.updateViewType(DetailsViewType.CAMPAIGN) },
             text = { 
                 Text(
-                    "Campaign Contributions",
+                    stringResource(id = R.string.tab_campaign),
                     fontWeight = if (filterState.selectedView == DetailsViewType.CAMPAIGN) FontWeight.Bold else FontWeight.Normal,
                     color = if (filterState.selectedView == DetailsViewType.CAMPAIGN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 ) 
@@ -219,13 +221,13 @@ private fun CampaignView(
                     value = campaignSearchQuery,
                     onValueChange = { viewModel.updateCampaignSearchQuery(it) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    placeholder = { Text("Search by contributor...") },
+                    placeholder = { Text(stringResource(id = R.string.search_contributor_hint)) },
                     singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(id = R.string.search_desc)) },
                     trailingIcon = if (campaignSearchQuery.isNotEmpty()) {
                         {
                             IconButton(onClick = { viewModel.updateCampaignSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(id = R.string.clear_desc))
                             }
                         }
                     } else null
@@ -241,7 +243,7 @@ private fun CampaignView(
                     androidx.compose.material3.FilterChip(
                         selected = selectedYear == "All",
                         onClick = { viewModel.selectYear("All") },
-                        label = { Text("All Years") },
+                        label = { Text(stringResource(id = R.string.all_years)) },
                         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -269,8 +271,8 @@ private fun CampaignView(
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
             ) {
                 val sortOptions = listOf(
-                    "$ Highest" to CampaignSortOption.AMOUNT_DESC,
-                    "$ Lowest" to CampaignSortOption.AMOUNT_ASC
+                    stringResource(id = R.string.sort_amount_highest) to CampaignSortOption.AMOUNT_DESC,
+                    stringResource(id = R.string.sort_amount_lowest) to CampaignSortOption.AMOUNT_ASC
                 )
                 sortOptions.forEach { (label, option) ->
                     androidx.compose.material3.FilterChip(
@@ -289,7 +291,7 @@ private fun CampaignView(
         if (chartData.isNotEmpty()) {
             item {
                 Text(
-                    text = if (selectedYear == "All") "Top Contributors (All Time)" else "Top Contributors ($selectedYear)",
+                    text = if (selectedYear == "All") stringResource(id = R.string.top_contributors_all_time) else stringResource(id = R.string.top_contributors_year_fmt, selectedYear),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -320,7 +322,7 @@ private fun CampaignView(
                 if (filteredOrgs.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Top Contributors ($cycle)",
+                            text = stringResource(id = R.string.top_contributors_year_fmt, cycle),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
@@ -343,7 +345,7 @@ private fun CampaignView(
                 }
             } else {
                 item {
-                    Text("No data for this year.", modifier = Modifier.padding(16.dp))
+                    Text(stringResource(id = R.string.no_data_for_year), modifier = Modifier.padding(16.dp))
                 }
             }
         }
@@ -436,13 +438,13 @@ private fun LobbyistView(
                     value = lobbyistSearchQuery,
                     onValueChange = { viewModel.updateLobbyistSearchQuery(it) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    placeholder = { Text("Search by donor, firm or payee...") },
+                    placeholder = { Text(stringResource(id = R.string.search_lobbyist_hint)) },
                     singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(id = R.string.search_desc)) },
                     trailingIcon = if (lobbyistSearchQuery.isNotEmpty()) {
                         {
                             IconButton(onClick = { viewModel.updateLobbyistSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(id = R.string.clear_desc))
                             }
                         }
                     } else null
@@ -454,10 +456,10 @@ private fun LobbyistView(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                 ) {
                     val sortOptions = listOf(
-                        "Newest" to LobbyistSortOption.DATE_DESC,
-                        "Oldest" to LobbyistSortOption.DATE_ASC,
-                        "$ Highest" to LobbyistSortOption.AMOUNT_DESC,
-                        "$ Lowest" to LobbyistSortOption.AMOUNT_ASC
+                        stringResource(id = R.string.sort_newest) to LobbyistSortOption.DATE_DESC,
+                        stringResource(id = R.string.sort_oldest) to LobbyistSortOption.DATE_ASC,
+                        stringResource(id = R.string.sort_amount_highest) to LobbyistSortOption.AMOUNT_DESC,
+                        stringResource(id = R.string.sort_amount_lowest) to LobbyistSortOption.AMOUNT_ASC
                     )
                     sortOptions.forEach { (label, option) ->
                         androidx.compose.material3.FilterChip(
@@ -483,7 +485,7 @@ private fun LobbyistView(
                     androidx.compose.material3.FilterChip(
                         selected = lobbyistSelectedYear == "All",
                         onClick = { viewModel.selectLobbyistYear("All") },
-                        label = { Text("All Years") },
+                        label = { Text(stringResource(id = R.string.all_years)) },
                         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -508,7 +510,7 @@ private fun LobbyistView(
         if (lobbyistChartData.isNotEmpty()) {
             item {
                 Text(
-                    text = if (lobbyistSelectedYear == "All") "Top Contributors (All Time)" else "Top Contributors ($lobbyistSelectedYear)",
+                    text = if (lobbyistSelectedYear == "All") stringResource(id = R.string.top_contributors_all_time) else stringResource(id = R.string.top_contributors_year_fmt, lobbyistSelectedYear),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -529,13 +531,13 @@ private fun LobbyistView(
         
         item {
             Text(
-                text = "Lobbyist Disclosures (LD-203)",
+                text = stringResource(id = R.string.lobbyist_disclosures_section_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
             )
             Text(
-                text = "Non-campaign contributions to charities, events, or inaugural committees by registered lobbying firms.",
+                text = stringResource(id = R.string.lobbyist_disclosures_explanation),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -565,7 +567,7 @@ private fun LobbyistView(
         } else if (filteredLobbyistContributions.isEmpty()) {
             item {
                 Text(
-                    text = "No lobbyist disclosures found for this politician.",
+                    text = stringResource(id = R.string.no_lobbyist_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -625,12 +627,12 @@ fun LobbyistContributionCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "From: ${report.registrant.name}",
+                        text = stringResource(id = R.string.from_prefix, report.registrant.name),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
-                        text = "Type: ${contribution.type.uppercase()}",
+                        text = stringResource(id = R.string.type_prefix, contribution.type.uppercase()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -663,7 +665,7 @@ fun LobbyistContributionCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Verify with Official Senate Report", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(id = R.string.verify_senate_report), style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -680,7 +682,9 @@ fun ContributorItem(
         NumberFormat.getCurrencyInstance().format(organization.total)
     }
     
-    val typeLabel = if (organization.type.equals("PAC", ignoreCase = true)) "PAC" else "Employer"
+
+    
+    val typeLabel = if (organization.type.equals("PAC", ignoreCase = true)) stringResource(id = R.string.type_pac) else stringResource(id = R.string.type_employer)
     val typeColor = if (organization.type.equals("PAC", ignoreCase = true)) {
         MaterialTheme.colorScheme.tertiary
     } else {
@@ -722,7 +726,7 @@ fun ContributorItem(
                     if (organization.mostRecentDate != null) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Last: ${organization.mostRecentDate}",
+                            text = stringResource(id = R.string.last_date_prefix, organization.mostRecentDate!!),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -755,7 +759,7 @@ fun ContributorItem(
             ) {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text(
-                        text = "Verify Source", 
+                        text = stringResource(id = R.string.verify_source), 
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

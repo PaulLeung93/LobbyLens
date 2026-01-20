@@ -1,3 +1,64 @@
 <resources>
     <string name="app_name">LobbyLens</string>
+    <string name="app_logo_desc">LobbyLens Logo</string>
+    <string name="app_name_upper">LOBBYLENS</string>
+    <string name="app_tagline">Transparency in your pocket.</string>
+
+    <!-- Home Screen -->
+    <string name="scan_candidate">SCAN CANDIDATE</string>
+    <string name="take_photo_desc">Take Photo</string>
+    <string name="upload_photo">UPLOAD PHOTO</string>
+    <string name="select_gallery_desc">Select from Gallery</string>
+    <string name="search_manual_hint">Search database manually...</string>
+    <string name="search_icon_desc">Search Icon</string>
+
+    <!-- Editor Screen -->
+    <string name="back_desc">Back</string>
+    <string name="loading_image_title">LOADING IMAGE</string>
+    <string name="loading_image_status">Loading image...</string>
+    <string name="analyzing_candidate_title">ANALYZING CANDIDATE</string>
+    <string name="identifying_status">Identifying...</string>
+    <string name="generating_visualization_status">Generating Visualization...</string>
+    <string name="unspecified_party">Unspecified</string>
+    <string name="unknown_state">Unknown State</string>
+    <string name="done_status">Done!</string>
+    <string name="processed_image_desc">Processed Image</string>
+    <string name="image_saved_toast">Image Saved to Gallery</string>
+    <string name="save">Save</string>
+    <string name="share">Share</string>
+    <string name="view_full_record">VIEW FULL RECORD</string>
+    <string name="search_archives_title">SEARCH ARCHIVES</string>
+    <string name="search_archives_subtitle">Find financial records by name.</string>
+    <string name="candidate_name_label">Candidate Name</string>
+    <string name="search">Search</string>
+    <string name="browse_members">BROWSE CURRENT MEMBERS</string>
+    <string name="search_desc">Search</string>
+
+    <!-- Details Screen -->
+    <string name="loading">Loading...</string>
+    <string name="details_default_title">Details</string>
+    <string name="na">N/A</string>
+    <string name="tab_lobbyist">Lobbyist Disclosures</string>
+    <string name="tab_campaign">Campaign Contributions</string>
+    <string name="search_contributor_hint">Search by contributor...</string>
+    <string name="clear_desc">Clear</string>
+    <string name="all_years">All Years</string>
+    <string name="sort_amount_highest">$ Highest</string>
+    <string name="sort_amount_lowest">$ Lowest</string>
+    <string name="top_contributors_all_time">Top Contributors (All Time)</string>
+    <string name="top_contributors_year_fmt">Top Contributors (%1$s)</string>
+    <string name="no_data_for_year">No data for this year.</string>
+    <string name="search_lobbyist_hint">Search by donor, firm or payee...</string>
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+    <string name="lobbyist_disclosures_section_title">Lobbyist Disclosures (LD-203)</string>
+    <string name="lobbyist_disclosures_explanation">Non-campaign contributions to charities, events, or inaugural committees by registered lobbying firms.</string>
+    <string name="no_lobbyist_data">No lobbyist disclosures found for this politician.</string>
+    <string name="from_prefix">From: %1$s</string>
+    <string name="type_prefix">Type: %1$s</string>
+    <string name="verify_senate_report">Verify with Official Senate Report</string>
+    <string name="type_pac">PAC</string>
+    <string name="type_employer">Employer</string>
+    <string name="last_date_prefix">Last: %1$s</string>
+    <string name="verify_source">Verify Source</string>
 </resources>
