@@ -133,6 +133,9 @@ class DetailsViewModel @Inject constructor(
                 _uiState.value = DetailsUiState.Error("Could not load candidate details.")
                 return@launch
             }
+            
+            val candidate = candidateObj
+            val name = candidateName ?: candidate.name
 
             // Step 2: Fetch Contribution Data using the resolved Committee ID
             val cycles = listOf("2024", "2022", "2020")
@@ -173,7 +176,7 @@ class DetailsViewModel @Inject constructor(
 
             // Initial success state (without Senate data yet)
             _uiState.value = DetailsUiState.Success(
-                candidate = candidateObj,
+                candidate = candidate,
                 committeeId = committeeId,
                 historicalOrganizations = successfulData,
                 senateContributions = emptyList(),
@@ -181,9 +184,7 @@ class DetailsViewModel @Inject constructor(
             )
 
             // Step 3: Fetch Senate Data (LD-203) if we have a name
-            if (candidateName != null) {
-                fetchSenateData(candidateName)
-            }
+            fetchSenateData(name)
         }
     }
 

@@ -22,7 +22,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "io.github.paulleung93.lobbylens.HiltTestRunner"
 
         val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
@@ -83,6 +83,20 @@ android {
         compose = true
         buildConfig = true
     }
+    
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            merges += "META-INF/LICENSE*"
+            merges += "META-INF/NOTICE*"
+            merges += "META-INF/DEPENDENCIES"
+            pickFirsts += "META-INF/INDEX.LIST"
+        }
+    }
 }
 
 dependencies {
@@ -111,13 +125,25 @@ dependencies {
     // Google GenAI SDK
     implementation(libs.google.genai)
     
+    // --- Unit Testing Libraries ---
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    
+    // --- Android/Integration Testing Libraries ---
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
+    androidTestImplementation(libs.mockk.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    
+    // --- Hilt Testing ---
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.55")
+    kspAndroidTest("com.google.dagger:hilt-android-compiler:2.55")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     
     // Hilt Dependency Injection
